@@ -26,6 +26,12 @@ flowchart LR
     C --> F[Step 2 - MIDAS2: ID strain variation within each species]
 ```
 ## Result Figure:
+At the end of step 1, we identify a list of significant species that we cross-compared with literature (upper figure), before they are grouped into phylum level (lower)
+
+<img width="349" height="466" alt="Screenshot 2025-10-25 at 7 56 50 PM" src="https://github.com/user-attachments/assets/b0f4683e-f21a-4d61-aed4-35ca912c3afa" />
+
+<img width="483" height="241" alt="Screenshot 2025-10-25 at 7 56 10 PM" src="https://github.com/user-attachments/assets/ab4352c8-ff3b-4656-b390-1890a74a4214" />
+
 
 ## Conclusion:
 
