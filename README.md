@@ -11,11 +11,11 @@ The project aims to build a reproducible metagenomic pipeline to identify strain
 
 ## Research Questions:
 Here we define strain changes as either 
-a) Single nucleotide polymorphism (SNPs) within gene of a species AND/OR
-b) Changes in gene presence and absence (aka function gain or loss) via copy number variants (CNV) of that gene in a species.
+1) Single nucleotide polymorphism (SNPs) within gene of a species AND/OR
+2) Changes in gene presence and absence (aka function gain or loss) via copy number variants (CNV) of that gene in a species.
 With that goal in mind, we build a workflow with two main steps:
-The first step is to identify differential abundance changes of all species in diabetic condition and treatment.
-With those changed species in mind, the second step is to see if these species also have strains that vary among different sample groups based on the definition mentioned above.
+1) The first step is to identify differential abundance changes of all species in diabetic condition and treatment.
+2) With those changed species in mind, the second step is to see if these species also have strains that vary among different sample groups based on the definition mentioned above.
 
 ```mermaid
 flowchart LR
