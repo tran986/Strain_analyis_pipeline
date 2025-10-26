@@ -32,9 +32,8 @@ After species differential abundance analysis, we identify a list of significant
 <p align="right">
   <img width="349" height="466" alt="Screenshot 2025-10-25 at 7 56 50 PM" src="https://github.com/user-attachments/assets/b0f4683e-f21a-4d61-aed4-35ca912c3afa">
 </p>
-
 <p align="left">
-<img width="614" height="444" alt="Screenshot 2025-10-25 at 8 03 13 PM" src="https://github.com/user-attachments/assets/1662cc1f-fe4f-4f68-ac0f-a0b1d1748f79" >
+<img width="610" height="440" alt="Screenshot 2025-10-25 at 8 03 13 PM" src="https://github.com/user-attachments/assets/1662cc1f-fe4f-4f68-ac0f-a0b1d1748f79" >
 </p>
 
 We then run a home-built tool -phylogenize- (https://github.com/pbradleylab/phylogenize) to reveal functional changes at species level, corrected for their phylogenetic relationship:
