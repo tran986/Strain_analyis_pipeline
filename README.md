@@ -29,10 +29,10 @@ flowchart LR
 ## Result Figure:
 After species differential abundance analysis, we identify a list of significant species that we cross-compared with literature (upper figure), before they are grouped into phylum level (lower):
 
-<div style="display: flex; justify-content: space-between; align-items: center;">
-  <img src="Screenshot 2025-10-25 at 7 56 50 PM" src="https://github.com/user-attachments/assets/b0f4683e-f21a-4d61-aed4-35ca912c3afa" alt="Left Figure" width="45%">
-  <img src="Screenshot 2025-10-25 at 8 03 13 PM" src="https://github.com/user-attachments/assets/1662cc1f-fe4f-4f68-ac0f-a0b1d1748f79" alt="Right Figure" width="45%">
-</div>
+
+<img align="left" src="Screenshot 2025-10-25 at 7 56 50 PM" src="https://github.com/user-attachments/assets/b0f4683e-f21a-4d61-aed4-35ca912c3afa" width="45%">
+<img align="right" src="Screenshot 2025-10-25 at 8 03 13 PM" src="https://github.com/user-attachments/assets/1662cc1f-fe4f-4f68-ac0f-a0b1d1748f79" width="45%">
+<br clear="both">
 
 
 <p align="right">
