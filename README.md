@@ -23,15 +23,15 @@ flowchart LR
     B --> C[BBDuk: Trimming based on Phred Score]
     C --> D[Kraken: Taxa classifiying]
     D --> E[Bracken: Estimating taxa abundance]
+    E --> F[phylogenize.v1: Identify increased gene families]
     C --> F[Step 2 - MIDAS2: ID strain variation within each species]
 ```
 ## Result Figure:
-At the end of step 1, we identify a list of significant species that we cross-compared with literature (upper figure), before they are grouped into phylum level (lower)
-
+After species differential abundance analysis, we identify a list of significant species that we cross-compared with literature (upper figure), before they are grouped into phylum level (lower):
 <img width="349" height="466" alt="Screenshot 2025-10-25 at 7 56 50 PM" src="https://github.com/user-attachments/assets/b0f4683e-f21a-4d61-aed4-35ca912c3afa" />
-
 <img width="614" height="444" alt="Screenshot 2025-10-25 at 8 03 13 PM" src="https://github.com/user-attachments/assets/1662cc1f-fe4f-4f68-ac0f-a0b1d1748f79" />
 
+We then run a home-built tool -phylogenize- (https://github.com/pbradleylab/phylogenize) to reveal functional changes at species level, corrected for their phylogenetic relationship:
 <img width="374" height="566" alt="Screenshot 2025-10-25 at 8 03 37 PM" src="https://github.com/user-attachments/assets/72b98d13-577b-436c-aadf-b1d3506606b6" />
 
 ## Conclusion:
