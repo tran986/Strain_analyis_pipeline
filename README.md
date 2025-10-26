@@ -29,9 +29,10 @@ flowchart LR
 At the end of step 1, we identify a list of significant species that we cross-compared with literature (upper figure), before they are grouped into phylum level (lower)
 
 <img width="349" height="466" alt="Screenshot 2025-10-25 at 7 56 50 PM" src="https://github.com/user-attachments/assets/b0f4683e-f21a-4d61-aed4-35ca912c3afa" />
-<img width="547" height="258" alt="image" src="https://github.com/user-attachments/assets/526bc489-a67d-4168-a9a9-716626bc4e72" />
 
+<img width="614" height="444" alt="Screenshot 2025-10-25 at 8 03 13 PM" src="https://github.com/user-attachments/assets/1662cc1f-fe4f-4f68-ac0f-a0b1d1748f79" />
 
+<img width="374" height="566" alt="Screenshot 2025-10-25 at 8 03 37 PM" src="https://github.com/user-attachments/assets/72b98d13-577b-436c-aadf-b1d3506606b6" />
 
 ## Conclusion:
 
