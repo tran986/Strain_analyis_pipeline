@@ -1,6 +1,10 @@
 library(dplyr)
 library(tidyverse)
 library(readxl)
+library(readr)
+library(purrr)
+library(dplyr)
+library(tidyverse)
 
 md = read_excel("~/Desktop/meta_analysis_26/metadata_with_cond.xls",
                           sheet = 1) # use this as a standard (FROM THE PAPER)
@@ -95,10 +99,10 @@ wget_urls_func <- function(md_final, study_id) {
 
 #2. function to read into .bracken files (push this to ASC):
 import_bracken=function(bracken_dir_path) {
-  file = list.file(path=bracken_dir_path)
+  file = list.files(path=bracken_dir_path)
   data = map(file, ~ { read_tsv(file.path(bracken_dir_path, .), show_col_types=FALSE) })
   samples = gsub("\\.bracken","", file)
-  data_newcol = map2(data, sample, ~ {mutate(.x, sample = .y)})
+  data_newcol = map2(data, samples, ~ {mutate(.x, sample = .y)})
   data_tidy = bind_rows(data_newcol)
   data_w_count = pivot_wider(data_tidy, 
                              names_from = sample, 
@@ -119,4 +123,4 @@ md_final_ls = list(CHNs_md_final,
 purrr::map2(md_final_ls, study_id_ls, ~ wget_urls_func(md_final = .x,
                                                        study_id = .y))
 
-
+test=import_bracken(bracken_dir_path="~/Desktop/meta_analysis_26/bracken_outputs/CHN")
