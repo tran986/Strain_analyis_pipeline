@@ -5,6 +5,10 @@ library(readr)
 library(purrr)
 library(dplyr)
 library(tidyverse)
+library(gdata)
+library(devtools)
+devtools::load_all("/Users/tran.986/Desktop/phylogenize/package/repermulize")
+devtools::load_all("/Users/tran.986/Desktop/phylogenize/package/phylogenize")
 
 md = read_excel("~/Desktop/meta_analysis_26/metadata_with_cond.xls",
                           sheet = 1) # use this as a standard (FROM THE PAPER)
@@ -17,6 +21,7 @@ md_CHNs = read_csv("~/Desktop/meta_analysis_26/metadata_CHNs.csv") #CHNs only
 md_CHNs["Sample"]<-substring(md_CHNs$`Sample Name`, 5)
 CHNs_md_final = md %>% left_join(md_CHNs, by = "Sample") %>%
   filter(!is.na(Run))
+write.csv(CHNs_md_final, "~/Desktop/meta_analysis_26/metadata_CHNs_final.csv")
 
 #---------MHN dataset1:--Study: ERP004605
 md_mhn1 = read_tsv("~/Desktop/meta_analysis_26/filereport_MHN_1.tsv")
@@ -33,8 +38,6 @@ mhn1_md_final = md_mhn1 %>%
 
 #---------MHN dataset2: - only have ND Ctrl: --Study: ERP003612
 md_mhn2 = read_tsv("~/Desktop/meta_analysis_26/filereport_MHN_2.tsv")
-View(md_mhn2)
-
 md_mhn2$Sample <- str_extract(md_mhn2$submitted_ftp, "[^/]+$") %>%
   str_extract("[^/]+$") %>%   # keep after last /
   str_extract("(?<=MetaHIT-)[^_]+")
@@ -43,11 +46,10 @@ mhn2_md_final = md_mhn2 %>%
   left_join(md, by = c("Sample")) %>% 
   filter(!is.na(Status)) %>%
   select(Sample, `Country subset`, Status, fastq_ftp)
+write.csv(mhn2_md_final, "~/Desktop/meta_analysis_26/mhn2_md_final.csv")
 
 #---------MHN dataset3: --Study: ERP002469 
 md_mhn3 = read_tsv("~/Desktop/meta_analysis_26/filereport_MHN_3.tsv")
-View(md_mhn3)
-
 md_mhn3$Sample <- str_extract(md_mhn3$submitted_ftp, "[^/]+$") %>%
   str_extract("[^/]+$") %>%
   str_extract("^[^_]+_[^_]+")
@@ -56,6 +58,8 @@ mhn3_md_final = md_mhn3 %>%
   left_join(md, by = c("Sample")) %>% 
   filter(!is.na(Status)) %>%
   select(Sample, `Country subset`, Status, fastq_ftp)
+write.csv(mhn3_md_final, "~/Desktop/meta_analysis_26/mhn3_md_final.csv")
+
 
 #--------MHN dataset4: --Study: ERP002061 -- all ND CTRL
 md_mhn4 = read_tsv("~/Desktop/meta_analysis_26/filereport_MHN_4.tsv")
@@ -68,6 +72,8 @@ mhn4_md_final = md_mhn4 %>%
   left_join(md, by = c("Sample")) %>% 
   filter(!is.na(Status)) %>%
   select(Sample, `Country subset`, Status, fastq_ftp)
+write.csv(mhn4_md_final, "~/Desktop/meta_analysis_26/mhn4_md_final.csv")
+
 
 #--------
 #Default Functions:
@@ -98,20 +104,86 @@ wget_urls_func <- function(md_final, study_id) {
 }
 
 #2. function to read into .bracken files (push this to ASC):
-import_bracken=function(bracken_dir_path) {
-  file = list.files(path=bracken_dir_path)
-  data = map(file, ~ { read_tsv(file.path(bracken_dir_path, .), show_col_types=FALSE) })
+import_bracken=function(study_id) { 
+  file = list.files(path=paste0(working_dir, "/abund/", study_id))
+  data = map(file, ~ { read_tsv(file.path(paste0(working_dir, "/abund/", study_id), .), show_col_types=FALSE) })
   samples = gsub("\\.bracken","", file)
   data_newcol = map2(data, samples, ~ {mutate(.x, sample = .y)})
   data_tidy = bind_rows(data_newcol)
-  data_w_count = pivot_wider(data_tidy, 
-                             names_from = sample, 
-                             values_from = new_est_reads,
-                             id_cols = name,
-                             values_fill = 0)
+  data_w_count = tidyr::pivot_wider(data_tidy, 
+                                    names_from = sample, 
+                                    values_from = new_est_reads,
+                                    id_cols = name,
+                                    values_fill = 0)
+  write.table(data_w_count, file = paste0(working_dir, "/phylogenize_out/", study_id, "/data_w_count.tsv"), sep = "\t", row.names = FALSE, quote = FALSE)
   return(data_w_count)
 }
 
+#3. function to create phylogenize input:
+extract_phyloz_metadata=function(import_bracken_out, 
+                                 metadata,
+                                 study_id, #study_id = CHN, MHN1, MHN3, 4, etc
+                                 envs_compared = c("ND CTRL", "T2D metformin-")) { 
+  #import_bracken_out = test
+  #metadata = CHNs_md_final 
+  #clean up metadata:
+  if (gdata::startsWith(metadata$Run, "SRR")[1] == TRUE) #then it is from CHN sample "SRR"
+    
+  {
+    metadata_clean=metadata[,c("Run", "Status")] %>%
+      rename("env"="Status",
+             "sample"="Run") %>%
+      mutate(dataset = study_id)
+    
+  } else { #all MHN studies with "ERR" samples
+    metadata_clean = metadata %>% 
+      mutate(sample = str_extract(fastq_ftp, "(?<=/)[^/]+(?=/[^/]+\\.fastq\\.gz)"),
+             dataset = study_id) %>%
+      select(Status, sample, dataset) %>%
+      rename("env"="Status")
+  }
+  
+  #filter 2 envs that will be compared:
+  metadata_filter=metadata_clean %>% filter(env %in% envs_compared)
+  
+  write.table(metadata_filter, file = paste0(working_dir, "/phylogenize_out/", study_id, "/metadata_filter.tsv"), sep = "\t", row.names = FALSE, quote = FALSE)
+  return(metadata_filter)
+  
+}
+
+
+#4. apply phylogenize on inputs: metadata and count
+dataset_dir = "/fs/project/bradley.720/projects/phylogenize_v2/phylogenize/package/phylogenize/inst/extdata"
+phylogenize_run=function(extract_phyloz_metadata_out,
+                         import_bracken_out,
+                         study_id,
+                         ref_env) { #"ND CTRL or T2D metformin-
+  
+  res=phylogenize(
+    output_file = paste0(working_dir, "/phylogenize_out/", study_id, "/phylogenize.html"),
+    out_dir = paste0(working_dir, "/phylogenize_out/", study_id),
+    data_dir = dataset_dir,
+    db = "human-gut",
+    taxon_level = "family",
+    type_16S=F,
+    which_phenotype = "abundance",
+    diff_abund_method = "ancombc2",
+    abundance_file = import_bracken_out,
+    metadata_file = extract_phyloz_metadata,
+    which_envir = ref_env, 
+    env_column = "env",
+    sample_column = "sample",
+    ncl=parallelly::availableCores(),
+    core_method = "permutrate-rlm")
+  
+  saveRDS(res, 
+          paste0(working_dir, "/phylogenize_out/", study_id, "/phylogenize.rds"))
+  return(res)
+}
+
+
+
+#####-----------------------------
 #--------apply default functions:
 study_id_ls = c("CHN", "MHN_1_ERP004605", "MHN_2_ERP003612", "MHN_3_ERP002469", "MHN_4_ERP002061")
 md_final_ls = list(CHNs_md_final,
