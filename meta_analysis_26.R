@@ -182,17 +182,3 @@ phylogenize_run=function(extract_phyloz_metadata_out,
 }
 
 
-
-#####-----------------------------
-#--------apply default functions:
-study_id_ls = c("CHN", "MHN_1_ERP004605", "MHN_2_ERP003612", "MHN_3_ERP002469", "MHN_4_ERP002061")
-md_final_ls = list(CHNs_md_final,
-                mhn1_md_final,
-                mhn2_md_final,
-                mhn3_md_final,
-                mhn4_md_final)
-
-purrr::map2(md_final_ls, study_id_ls, ~ wget_urls_func(md_final = .x,
-                                                       study_id = .y))
-
-test=import_bracken(bracken_dir_path="~/Desktop/meta_analysis_26/bracken_outputs/CHN")
