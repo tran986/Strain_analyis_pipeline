@@ -35,6 +35,7 @@ mhn1_md_final = md_mhn1 %>%
   left_join(md, by = c("Sample")) %>%
   filter(!is.na(Status)) %>%
   select(Sample, `Country subset`, Status, fastq_ftp)
+write.csv(mhn1_md_final, "~/Desktop/meta_analysis_26/mhn1_md_final.csv")
 
 #---------MHN dataset2: - only have ND Ctrl: --Study: ERP003612
 md_mhn2 = read_tsv("~/Desktop/meta_analysis_26/filereport_MHN_2.tsv")
@@ -127,7 +128,7 @@ extract_phyloz_metadata=function(import_bracken_out,
   #import_bracken_out = test
   #metadata = CHNs_md_final 
   #clean up metadata:
-  if (gdata::startsWith(metadata$Run, "SRR")[1] == TRUE) #then it is from CHN sample "SRR"
+  if (study_id == "CHN") #then it is from CHN sample "SRR"
     
   {
     metadata_clean=metadata[,c("Run", "Status")] %>%
