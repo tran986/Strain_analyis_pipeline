@@ -182,4 +182,33 @@ phylogenize_run=function(extract_phyloz_metadata_out,
   return(res)
 }
 
+#5. Function to run the other pipeline (pre-phylogenize merging pipeline):
+#from bracken output -> apply ancombc:
+ancomRun = function(count_tbl, study_id, metadata){
+  
+  count = count_tbl %>% column_to_rownames(var = "name")
+  metadata_tbl = extract_phyloz_metadata(import_bracken_out = count,
+                                         metadata = metadata,
+                                         study_id = study_id,
+                                         envs_compared = c("ND CTRL", "T2D metformin-"))
+  metadata_tbl = metadata_tbl %>% column_to_rownames(var = "sample")
+  
+  #filter out those samples in the metadata but not in count_tbl:
+  count_tbl_clean = count %>% dplyr::select(rownames(metadata_tbl))
+  all(colnames(count_tbl_clean) == rownames(metadata_tbl))
+  tse <- TreeSummarizedExperiment(assays = S4Vectors::SimpleList(counts = as.matrix(count_tbl_clean)),
+                                  colData = S4Vectors::DataFrame(metadata_tbl)
+  )
+  #apply ancombc2:
+  print("fitting ANCOMBC")
+  res_ancom=ANCOMBC::ancombc2(data = tse,
+                              assay_name = "counts",
+                              fix_formula = "env")
+  
+  return(list(res = res_ancom,
+              count_input = count_tbl_clean,
+              metadata_input = metadata_tbl))
+  saveRDS(res_ancom,
+          paste0(working_dir, "/pipeline2/ancom/", study_id, "_ancombc_res.rds"))
+}
 
