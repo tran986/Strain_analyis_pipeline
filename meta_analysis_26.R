@@ -334,3 +334,33 @@ readRes_n_pdCal=function(study_id) { #study_id = CHN, MH1, MH3
   return(res_final)
 }
 
+#9. Make a function that takes list of all res across all study_id
+# -> and outputs an upset plot ("negative" or "positive" direction)
+upset_plotMake <- function(taxa_list, direction_es) {
+  taxa_list_filt <- lapply(taxa_list, function(df) {
+    if (direction_es == "positive"){
+      df[df$effect.size > 0, ]
+    } else {
+      df[df$effect.size < 0, ]
+    }
+  })
+  long_df <- bind_rows(
+    lapply(names(taxa_list_filt), function(ds) {
+      data.frame(taxon = unique(taxa_list_filt[[ds]]$taxon), dataset = ds)
+    })
+  )
+  
+  binary_matrix <- long_df |>
+    mutate(present = 1) |>
+    pivot_wider(names_from = dataset, values_from = present, values_fill = 0)
+  
+  upset(
+    as.data.frame(binary_matrix[, c("CHN","MH1","MH3")]),  # numeric 0/1 columns only
+    sets = c("CHN","MH1","MH3"),
+    order.by = "freq",
+    mainbar.y.label = paste0("Intersection Size - ",direction_es),
+    sets.x.label = "Overlapping Taxa",
+    text.scale = 1.75
+  )
+}
+
