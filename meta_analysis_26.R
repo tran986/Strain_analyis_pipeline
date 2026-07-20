@@ -7,8 +7,10 @@ library(purrr)
 library(dplyr)
 library(tidyverse)
 library(devtools)
+library(ape)
+library(picante)
 #devtools::load_all("/fs/project/bradley.720/projects/phylogenize_v2/phylogenize_repermulize/package/repermulize")
-devtools::load_all("/fs/project/bradley.720/projects/phylogenize_v2/phylogenize_repermulize/package/phylogenize")
+devtools::load_all("/Users/tran.986/Desktop/phylogenize/package/phylogenize")
 
 
 #--------
@@ -17,7 +19,7 @@ devtools::load_all("/fs/project/bradley.720/projects/phylogenize_v2/phylogenize_
 #e.g., study_id = CHN, ERP004605, ERP003612, ERP002061, ERP002469
 wget_urls_func <- function(md_final, study_id) {
   
-  out_file <- paste0("/fs/project/bradley.720/projects/meta_analysis_26/fastq_url/", study_id, "_fastq_urls.txt")
+  out_file <- paste0(working_dir, "/fastq_url/", study_id, "_fastq_urls.txt")
   
   wget_urls <- c(
     paste0(
@@ -111,7 +113,7 @@ extract_phyloz_metadata=function(import_bracken_out,
 
 
 #4. apply phylogenize on inputs: metadata and count
-dataset_dir = "/fs/project/bradley.720/projects/phylogenize_v2/phylogenize/package/phylogenize/inst/extdata"
+#dataset_dir = "/fs/project/bradley.720/projects/phylogenize_v2/phylogenize/package/phylogenize/inst/extdata"
 phylogenize_run=function(provided_file_path = NULL,
                          #extract_phyloz_metadata_out,
                          #import_bracken_out,
@@ -295,4 +297,40 @@ ashRun = function(mu_poolCal_out, SE_poolCal_out) {
   
 }
 
+#==============ANALYSIS OF FINAL BIOLOGICAL HITS:
+#-----pipeline1:
+#8. function to read into all-result.csv -> filter q.value<0.05 -> calculate for PD: ->return all info:
+readRes_n_pdCal=function(study_id) { #study_id = CHN, MH1, MH3
+  
+  res=read.csv(paste0(working_dir, "/all-results-", study_id, ".csv")) #change if working on HPC
+  sig=res[res$q.value < 0.05, ]
+  sig_ls=split(sig, sig$taxon)
+  length(sig_ls)
+  
+  #for each family, calculate PD for each gene:
+  pd=lapply(seq_along(sig_ls), function(i){
+    
+    family=names(sig_ls)[i] #obtain the name of the family
+    
+    gene_family=gene_pres[[family]] #only take gene-pres of that family i
+    genePres=gene_family[rownames(gene_family) %in% sig_ls[[i]]$gene, ,drop=F] #for each family, only take the sig. genes
+    pres=as.matrix(genePres)
+    
+    #filter out trees: tip_label = species in the final presence gene matrix:
+    tree_family = tree[[family]]
+    tree_fin=keep.tip(tree_family, colnames(pres))
+    
+    #pd calculated:
+    pd_df=pd(pres, tree_family)
+    pd_df 
+    
+  }) 
+  
+  #merge pd info with all_res:
+  res_final=bind_rows(pd) %>% 
+    rownames_to_column(var="gene") %>%
+    inner_join(sig, by = "gene") %>%
+    arrange(-PD)
+  return(res_final)
+}
 
