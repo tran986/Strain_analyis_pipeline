@@ -9,6 +9,8 @@ library(tidyverse)
 library(devtools)
 library(ape)
 library(picante)
+library(UpSetR)
+library(circlize)
 #devtools::load_all("/fs/project/bradley.720/projects/phylogenize_v2/phylogenize_repermulize/package/repermulize")
 devtools::load_all("/Users/tran.986/Desktop/phylogenize/package/phylogenize")
 
@@ -335,15 +337,17 @@ readRes_n_pdCal=function(study_id) { #study_id = CHN, MH1, MH3
 }
 
 #9. Make a function that takes list of all res across all study_id
-# -> and outputs an upset plot ("negative" or "positive" direction)
-upset_plotMake <- function(taxa_list, direction_es) {
-  taxa_list_filt <- lapply(taxa_list, function(df) {
+# -> and outputs an upset plot ("negative" or "positive" direction) Or
+# an heatmap plot
+taxaLevel_plotMake <- function(taxa_list, direction_es, plot_type) {
+  taxa_list_filt <- lapply(taxa_list, function(f) {
     if (direction_es == "positive"){
-      df[df$effect.size > 0, ]
+      f[f$effect.size > 0, ]
     } else {
-      df[df$effect.size < 0, ]
+      f[f$effect.size < 0, ]
     }
   })
+  if (plot_type == "upset") {
   long_df <- bind_rows(
     lapply(names(taxa_list_filt), function(ds) {
       data.frame(taxon = unique(taxa_list_filt[[ds]]$taxon), dataset = ds)
@@ -361,6 +365,38 @@ upset_plotMake <- function(taxa_list, direction_es) {
     mainbar.y.label = paste0("Intersection Size - ",direction_es),
     sets.x.label = "Overlapping Taxa",
     text.scale = 1.75
-  )
+  )}
+  else {
+    heat_df <- taxa_list_filt |>
+      lapply(\(a) {
+        a |>
+          count(taxon, name = "taxa_hits_count")}) |>
+      imap(\(df, dataset) {
+        df$dataset <- dataset
+        df
+      }) |>
+      bind_rows() |>
+      pivot_wider(
+        names_from = dataset,
+        values_from = taxa_hits_count,
+        values_fill = 0
+      )
+    
+    heat_mat = heat_df |> column_to_rownames(var="taxon") |>
+      as.matrix()
+    if (direction_es == "positive") {
+      col_fun = circlize::colorRamp2(c(0, max(heat_mat) / 2, max(heat_mat)),
+                                     c("white", "#9a0d1b", "#400000"))
+    } else {
+      col_fun <- circlize::colorRamp2(c(0, max(heat_mat) / 2, max(heat_mat)),
+                                      c("white","#03396c", "#011f4b"))
+    }
+    ComplexHeatmap::Heatmap(
+      heat_mat,
+      name = paste0("# Significant Genes-\n", direction_es, " ES"),
+      col = col_fun
+    )
+  }
+  
 }
 
