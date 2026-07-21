@@ -340,6 +340,7 @@ readRes_n_pdCal=function(study_id) { #study_id = CHN, MH1, MH3
 # -> and outputs an upset plot ("negative" or "positive" direction) Or
 # an heatmap plot
 taxaLevel_plotMake <- function(taxa_list, direction_es, plot_type) {
+
   taxa_list_filt <- lapply(taxa_list, function(f) {
     if (direction_es == "positive"){
       f[f$effect.size > 0, ]
@@ -389,14 +390,47 @@ taxaLevel_plotMake <- function(taxa_list, direction_es, plot_type) {
                                      c("white", "#9a0d1b", "#400000"))
     } else {
       col_fun <- circlize::colorRamp2(c(0, max(heat_mat) / 2, max(heat_mat)),
-                                      c("white","#03396c", "#011f4b"))
+                                      c("white","#03396c", "#131e3a"))
     }
+    #reordering block of heatmap so higher values go on top
+    heat_mat <- heat_mat[
+      order(apply(heat_mat, 1, max), decreasing = TRUE),
+    ]
+    
     ComplexHeatmap::Heatmap(
       heat_mat,
-      name = paste0("# Significant Genes-\n", direction_es, " ES"),
-      col = col_fun
+      name = "# significant genes",
+      col = col_fun,
+      cluster_rows = FALSE
     )
   }
   
+}
+
+#10.a function that takes in the list of all_res dfs (e.g CHN_all_res outputed from readRes_n_pdCal func)
+#and outputs genes in taxa that are consistent across study_ids
+#count_feature column = number of dataset that gene shows up
+consensus_geneFind=function(all_res_ls, direction_es) {
+  feature_df=lapply(all_res_ls, function(s) {
+    s$"feature"<- paste0(s$taxon, "__", s$gene)
+    s
+  }) |>
+    imap(\(df, dataset) {
+      df$dataset <- dataset
+      df
+    }) 
+  
+  if (direction_es == "positive") {
+    feature_df = bind_rows(feature_df) |>
+      filter(effect.size > 0) 
+  } else {
+    feature_df = bind_rows(feature_df) |>
+      filter(effect.size < 0) 
+  }
+  feature_df |> group_by(feature) |>
+    summarize(count_feature = n()) %>% 
+    arrange(-count_feature) |> 
+    separate(feature, into = c("taxon", "gene"), sep = "__") |>
+    left_join(annotation_df, by=c("gene")) 
 }
 
