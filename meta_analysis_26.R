@@ -483,3 +483,108 @@ Pre_mergePlot=function(mergeRes) #all-results from pre-Phylogenize merging:
     scale_fill_manual(
       values = c("negativeES" = "#131e3a", "positiveES" = "darkred"))
 }
+
+#-----------PIPELINE 1 VS PIPELINE 2:
+#11 OPTIONAL.a function how much of each study_id's all-result (post-Phylogenize merging) 
+#taxa overlaps with all-results of pre-Phylogenize merging:
+pre_v_postFind_eachStudy <- function(merge_resPre, res_listPost, direction_es) {
+  
+  ## PRE-PHYLOGENIZE
+  if (direction_es == "positive") {
+    gene_preMerge <- merge_resPre %>%
+      filter(effect.size > 0, q.value < 0.05)
+  } else {
+    gene_preMerge <- merge_resPre %>%
+      filter(effect.size < 0, q.value < 0.05)
+  }
+  
+  taxa_preMerge <- gene_preMerge %>%
+    count(taxon, name = "taxon_count_pre")
+  
+  ## POST-PHYLOGENIZE
+  taxa_post <- imap(res_listPost, function(df, dataset) {
+    
+    col_name <- paste0("taxon_count_post_", dataset)
+    
+    if (direction_es == "positive") {
+      df <- df %>% filter(effect.size > 0)
+    } else {
+      df <- df %>% filter(effect.size < 0)
+    }
+    
+    df %>%
+      count(taxon, name = col_name)
+    
+  })
+  
+  ## Merge all post datasets by taxon
+  taxa_postMerge <- reduce(
+    taxa_post,
+    full_join,
+    by = "taxon"
+  )
+  
+  ## Merge with pre counts
+  result <- taxa_preMerge %>%
+    full_join(taxa_postMerge, by = "taxon") %>%
+    mutate(
+      across(where(is.numeric), ~ replace_na(.x, 0))
+    )
+  
+  return(result)
+}
+
+#12 OPTIONAL. a function to make a heatmap from function 11:
+preVpost_HeatmapMake = function(direction_es, merge_resPre, res_listPost) {
+  
+  #building a df for 
+  if (direction_es == "positive") {
+    preVpost_pos=pre_v_postFind_eachStudy(merge_resPre = merge_res,
+                                          res_listPost = res_list,
+                                          direction_es = "positive") |>
+      column_to_rownames("taxon") |>
+      as.matrix() 
+    
+    #set up color for making heatmap afterward
+    col_setup=circlize::colorRamp2(c(0, max(preVpost_pos) / 2, max(preVpost_pos)),
+                         c("white", "#9a0d1b", "#400000"))
+    
+  } else {
+    preVpost_pos=pre_v_postFind_eachStudy(merge_resPre = merge_res,
+                                          res_listPost = res_list,
+                                          direction_es = "negative") |>
+      column_to_rownames("taxon") |>
+      as.matrix() 
+    
+    col_setup=circlize::colorRamp2(c(0, max(preVpost_pos) / 2, max(preVpost_pos)),
+                                   c("white","#03396c", "#131e3a"))
+  }
+  
+  #making heatmap:
+  col_group <- data.frame(
+    Pipeline = append(c("Pre-Phylogenize Merging"), rep(c("Post-Phylogenize Merging"), 3))
+  )
+  
+  rownames(col_group) <- colnames(preVpost_pos)
+  colnames(preVpost_pos) <- c("Pre", "CHN", "MH1", "MH3")
+  
+  ha <- HeatmapAnnotation(
+    Pipeline = col_group$Pipeline,
+    col = list(
+      Pipeline = c(
+        "Pre-Phylogenize Merging"  = "#e69f00",   # orange
+        "Post-Phylogenize Merging" = "#009e73"    # teal
+      )
+    )
+  )
+  
+  ComplexHeatmap::Heatmap(matrix = preVpost_pos, 
+                          cluster_columns = F,
+                          top_annotation = ha,
+                          name = paste0("# of significant genes\n", direction_es),
+                          col = col_setup)
+  
+}
+
+
+
