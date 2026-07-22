@@ -165,6 +165,7 @@ taxaLevel_plotMake(taxa_list=anno_list,
 
 
 #-------FOR GENE LEVEL that consensus in each species
+#count_feature shows how many study_id that gene/taxa shows up:
 res_list=list("CHN"=CHN_all_res,
      "MH1"=MH1_all_res,
      "MH3"=MH3_all_res)
@@ -181,13 +182,82 @@ merge_res=read.csv(paste0(working_dir,"/all-results-merged-3ds.csv"))
 #---TAXON-GENE LEVEL:
 Pre_mergePlot(mergeRes = merge_res)
 
-
 #----------pipeline1 AND pipeline 2:
-#how much of each study_id's all-result 
-merge_res
-MH1_all_res
-CHN_all_res
-MH3_all_res
+#how much of each study_id's all-result (post-Phylogenize merging) 
+#taxa overlaps with all-results of pre-Phylogenize merging:
+pre_v_postFind_eachStudy = function(merge_res, res_list, direction_es) {
+
+  # PRE-PHYLOGENIZE MERGING
+  if (direction_es == "positive") {
+    gene_preMerge = merge_res[merge_res$effect.size > 0 & merge_res$q.value < 0.05, ]
+  } else {
+    gene_preMerge = merge_res[merge_res$effect.size < 0 & merge_res$q.value < 0.05, ]
+  }
+  
+  #rename effect.size column now, so after merging, we know where that
+  #effect.size comes from:
+  names(gene_preMerge)[names(gene_preMerge) == "effect.size"] <- "effect.size_pre"
+  
+  taxa_preMerge = gene_preMerge |>
+    group_by(taxon) |>
+    summarize(taxon_count_pre = n())
+  
+  # POST-PHYLOGENIZE MERGING
+  # TAXA:
+  taxa_post=lapply(seq_along(res_list), function(id) {
+    # for TAXA LEVEL:
+    col_name <- paste0("taxon_count_post_", names(res_list)[id])
+    if (direction_es == "positive") {
+      
+      taxa_postMerge=res_list[[id]] |> filter(effect.size > 0) |>
+        group_by(taxon) |>
+        summarize(!!col_name := n(), .groups = "drop")
+      
+    } else {
+      
+      taxa_postMerge=res_list[[id]] |> filter(effect.size < 0) |>
+        group_by(taxon) |>
+        summarize(!!col_name := n(), .groups = "drop")
+    }
+    
+    inner_join(taxa_preMerge,taxa_postMerge, by = "taxon") %>%
+      replace(is.na(.), 0)
+    
+  })
+  bind_rows(taxa_post)
+}
+
+#how much of each study_id's all-result (post-Phylogenize merging) 
+#taxa
+# overlaps with all-results
+# of pre-Phylogenize merging:
+
+
+
+
+
+# GENE:
+inner_join(dplyr::select(gene_preMerge, -c("effect.size")),
+           res_list[[1]] |> filter(effect.size > 0) |> ,
+           by = c("taxon", "gene"))
+
+
+
+postM_gene_pos=consensus_geneFind(all_res_ls=res_list,
+                                  direction_es = "positive") |>
+  filter(count_feature > 1) 
+
+postM_gene_pos |> inner_join(gene_preMerge, by = c("taxon","gene"))
+
+
+consensus_geneFind(all_res_ls=res_list,
+                   direction_es = "negative") |> 
+  filter(count_feature > 1)
+
+
+
+
+
 
 
 #---Expand to more datasets:
