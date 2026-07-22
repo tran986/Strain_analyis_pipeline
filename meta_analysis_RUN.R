@@ -178,55 +178,16 @@ consensus_geneFind(all_res_ls=res_list,
 #----------pipeline 2:
 merge_res=read.csv(paste0(working_dir,"/all-results-merged-3ds.csv")) 
 
-#---TAXON LEVEL:
-pos_merge=merge_res |>
-  dplyr::filter(q.value < 0.05, effect.size > 0) |>
-  left_join(annotation_df, by = "gene") |>
-  group_by(taxon) |>
-  summarize(count_taxon = n(), .groups = "drop") |>
-  arrange(desc(count_taxon)) |>
-  mutate(es = "positiveES")
+#---TAXON-GENE LEVEL:
+Pre_mergePlot(mergeRes = merge_res)
 
-neg_merge=merge_res |>
-  dplyr::filter(q.value < 0.05, effect.size < 0) |>
-  left_join(annotation_df, by = "gene") |>
-  group_by(taxon) |>
-  summarize(count_taxon = n(), .groups = "drop") |>
-  arrange(desc(count_taxon)) |>
-  mutate(es = "negativeES")
 
-merge_df=rbind(pos_merge,neg_merge) 
-
-pos_merge = pos_merge |> rbind(
-data.frame(
-  taxon=anti_join(merge_df, pos_merge, by = "taxon")$taxon,
-  count_taxon = 0,
-  es = "positiveES"
-))
- 
-neg_merge = neg_merge |> rbind(
-  data.frame(
-    taxon=anti_join(merge_df, neg_merge, by = "taxon")$taxon,
-    count_taxon = 0,
-    es = "negativeES"
-  ))
-
-rbind(neg_merge, 
-      pos_merge) |> ggplot(aes(x = taxon, y = count_taxon, fill = es)) +
-  geom_col(position = position_dodge(width = 0.8), width = 0.7) +
-  theme_bw() +
-  labs(
-    x = "Taxon",
-    y = "Count of significant genes (pre-Phylogenize merge)"
-  ) + theme(
-    axis.title.x = element_text(face = "bold"),
-    axis.text.x = element_text(face = "bold"),
-    axis.text.y = element_text(face = "bold"),
-    axis.title.y = element_text(face = "bold")) + 
-  coord_flip() +
-  scale_fill_manual(
-    values = c("negativeES" = "#131e3a", "positiveES" = "darkred"))
-    
+#----------pipeline1 AND pipeline 2:
+#how much of each study_id's all-result 
+merge_res
+MH1_all_res
+CHN_all_res
+MH3_all_res
 
 
 #---Expand to more datasets:

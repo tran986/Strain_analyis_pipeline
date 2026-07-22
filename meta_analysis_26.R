@@ -434,3 +434,52 @@ consensus_geneFind=function(all_res_ls, direction_es) {
     left_join(annotation_df, by=c("gene")) 
 }
 
+#11.A function that inputs all-results.csv from pre-Phylogenize merging
+#and outputs bar plots of # of sig.genes across taxa:
+
+Pre_mergePlot=function(mergeRes) #all-results from pre-Phylogenize merging:
+{
+  mergeRes = merge_res
+  pos_merge=mergeRes |>
+    dplyr::filter(q.value < 0.05, effect.size > 0) |>
+    group_by(taxon) |>
+    summarize(count_taxon = n(), .groups = "drop") |>
+    arrange(desc(count_taxon)) |>
+    mutate(es = "positiveES")
+  
+  neg_merge=mergeRes |>
+    dplyr::filter(q.value < 0.05, effect.size < 0) |>
+    group_by(taxon) |>
+    summarize(count_taxon = n(), .groups = "drop") |>
+    arrange(desc(count_taxon)) |>
+    mutate(es = "negativeES")
+  
+  merge_df=rbind(pos_merge,neg_merge) 
+  
+  merge_fix = pos_merge |> rbind(
+    data.frame(
+      taxon=anti_join(merge_df, pos_merge, by = "taxon")$taxon,
+      count_taxon = 0,
+      es = "positiveES"
+    )) |> rbind(
+      data.frame(
+        taxon=anti_join(merge_df, neg_merge, by = "taxon")$taxon,
+        count_taxon = 0,
+        es = "negativeES"
+      ) |> rbind(neg_merge))
+  
+  merge_fix |> ggplot(aes(x = taxon, y = count_taxon, fill = es)) +
+    geom_col(position = position_dodge(width = 0.8), width = 0.7) +
+    theme_bw() +
+    labs(
+      x = "Taxon",
+      y = "Count of significant genes (pre-Phylogenize merge)"
+    ) + theme(
+      axis.title.x = element_text(face = "bold"),
+      axis.text.x = element_text(face = "bold"),
+      axis.text.y = element_text(face = "bold"),
+      axis.title.y = element_text(face = "bold")) + 
+    coord_flip() +
+    scale_fill_manual(
+      values = c("negativeES" = "#131e3a", "positiveES" = "darkred"))
+}
