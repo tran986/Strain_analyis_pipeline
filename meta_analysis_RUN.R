@@ -3,13 +3,13 @@ working_dir = "/Users/tran.986/Desktop/meta_analysis_26"
 source(paste0(working_dir, "/meta_analysis_26.R"))
 
 #---pipeline 1: merge post-phylogenize
-#---CHN only:
+#---CHN only: (Qin et al, 2012) - a metagenome wide association study...
 #phylogenize_full_func(study_id = "CHN",
 #                      metadata_dir_path = paste0(working_dir,"/metadata/CHN_md_final.csv"),
 #                      ref_env = "T2D metformin-",
 #                      envs_compared = c("ND CTRL", "T2D metformin-"))	
 
-#---ERP002469_MH3 only:
+#---ERP002469_MH3 only: (karlssonFH et al, 2013)
 #test = import_bracken(study_id = "ERP002469_MH3")
 #metadata = read_csv(paste0(working_dir,"/metadata/mhn3_md_final.csv"))
 #test_md = extract_phyloz_metadata(import_bracken_out = test,
@@ -22,7 +22,7 @@ source(paste0(working_dir, "/meta_analysis_26.R"))
 #		      ref_env = "T2D metformin-",
 #		      envs_compared = c("ND CTRL", "T2D metformin-"))
 
-#---ERP004605_MH1 only:
+#---ERP004605_MH1 only: "(Li et al, 2014) An integrated catalog of reference genes in the human gut microbiome" 
 #phylogenize_full_func(study_id = "ERP004605_MH1",
 #		      metadata_dir_path = paste0(working_dir,"/metadata/mhn1_md_final.csv"),
 #		      ref_env = "T2D metformin-",
@@ -204,11 +204,20 @@ preVpost_HeatmapMake(direction_es = "negative",
 
 
 #---Expand to more datasets:
-library(dplyr)
+library(curatedMetagenomicData)
+#MetaCardis -- Molinaro et al: Imidazole propionate is increased in diabetes and associated with dietary patterns and altered microbial ecology
 data("sampleMetadata")   # explicitly loads it into your environment
-sampleMetadata |> filter(study_condition == "T2D") |> View()
+#             HMP_2019_t2d --> HMP (not started)
+#         KarlssonFH_2013 --> MH3 (done)
+#                LiJ_2014 --> MH1 (done)
+#      MetaCardis_2020_a --> MCA (in progress)
+#              QinJ_2012 --> CHN (done)
+# SankaranarayananK_2015 --> SKK (not started)
 
-
-
+#making metadata for each T2D studies found in curatedMetagenomicData:
+ctrl_subj= sampleMetadata |> 
+  filter(study_name == "MetaCardis_2020_a",
+         study_condition == "control" &
+         disease == "healthy") 
 
 
