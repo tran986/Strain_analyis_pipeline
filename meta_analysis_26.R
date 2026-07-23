@@ -537,36 +537,37 @@ pre_v_postFind_eachStudy <- function(merge_resPre, res_listPost, direction_es) {
 #12 OPTIONAL. a function to make a heatmap from function 11:
 preVpost_HeatmapMake = function(direction_es, merge_resPre, res_listPost) {
   
-  #building a df for 
+  # TAXA LEVEL:
+  #building a df for TAXA heatmap
   if (direction_es == "positive") {
-    preVpost_pos=pre_v_postFind_eachStudy(merge_resPre = merge_res,
-                                          res_listPost = res_list,
+    preVpost=pre_v_postFind_eachStudy(merge_resPre = merge_resPre,
+                                          res_listPost = res_listPost,
                                           direction_es = "positive") |>
       column_to_rownames("taxon") |>
       as.matrix() 
     
     #set up color for making heatmap afterward
-    col_setup=circlize::colorRamp2(c(0, max(preVpost_pos) / 2, max(preVpost_pos)),
+    col_setup=circlize::colorRamp2(c(0, max(preVpost) / 2, max(preVpost)),
                          c("white", "#9a0d1b", "#400000"))
     
   } else {
-    preVpost_pos=pre_v_postFind_eachStudy(merge_resPre = merge_res,
-                                          res_listPost = res_list,
+    preVpost=pre_v_postFind_eachStudy(merge_resPre = merge_resPre,
+                                          res_listPost = res_listPost,
                                           direction_es = "negative") |>
       column_to_rownames("taxon") |>
       as.matrix() 
     
-    col_setup=circlize::colorRamp2(c(0, max(preVpost_pos) / 2, max(preVpost_pos)),
+    col_setup=circlize::colorRamp2(c(0, max(preVpost) / 2, max(preVpost)),
                                    c("white","#03396c", "#131e3a"))
   }
   
   #making heatmap:
   col_group <- data.frame(
-    Pipeline = append(c("Pre-Phylogenize Merging"), rep(c("Post-Phylogenize Merging"), 3))
+    Pipeline = c("Pre-Phylogenize Merging", rep("Post-Phylogenize Merging", length(res_listPost)))
   )
   
-  rownames(col_group) <- colnames(preVpost_pos)
-  colnames(preVpost_pos) <- c("Pre", "CHN", "MH1", "MH3")
+  rownames(col_group) <- colnames(preVpost)
+  colnames(preVpost) <- c("Pre", names(res_listPost))
   
   ha <- HeatmapAnnotation(
     Pipeline = col_group$Pipeline,
@@ -578,13 +579,108 @@ preVpost_HeatmapMake = function(direction_es, merge_resPre, res_listPost) {
     )
   )
   
-  ComplexHeatmap::Heatmap(matrix = preVpost_pos, 
+  taxa_preVpost_hm=ComplexHeatmap::Heatmap(matrix = preVpost, 
                           cluster_columns = F,
                           top_annotation = ha,
                           name = paste0("# of significant genes\n", direction_es),
                           col = col_setup)
   
+  # GENE LEVEL:
+  genePrevPost=lapply(seq_along(res_listPost), function(i) {
+      if (direction_es == "positive") {
+      test_gene = inner_join(merge_resPre[merge_resPre$q.value<0.05 & merge_resPre$effect.size > 0,],
+                                res_listPost[[i]][res_listPost[[i]]$effect.size > 0,],
+                                by = c("gene", "taxon")) |> 
+        dplyr::select(taxon, gene, effect.size.x, effect.size.y) |>
+        dplyr::rename("effect.size_pre"="effect.size.x",
+                      "effect.size"="effect.size.y") |>
+        left_join(annotation_df, by = "gene") |>
+        mutate(study_id = names(res_listPost)[i])
+      } else {
+        test_gene = inner_join(merge_resPre[merge_resPre$q.value<0.05 & merge_resPre$effect.size < 0,],
+                                  res_listPost[[i]][res_listPost[[i]]$effect.size < 0,],
+                                  by = c("gene", "taxon")) |> 
+          dplyr::select(taxon, gene, effect.size.x, effect.size.y) |>
+          dplyr::rename("effect.size_pre"="effect.size.x",
+                        "effect.size"="effect.size.y") |>
+          left_join(annotation_df, by = "gene") |>
+          mutate(study_id = names(res_listPost)[i])
+      }
+      
+      if (nrow(test_gene) > 0) {
+        test_gene = test_gene |> select(-any_of(c("accession","function")))
+        ## Matrix of effect sizes
+        heat_mat <- test_gene |>
+          dplyr::select(effect.size_pre, effect.size) |>
+          mutate(across(everything(), as.numeric)) |>
+          as.matrix()
+        
+        rownames(heat_mat) <- test_gene$gene
+        colnames(heat_mat) <- c("Pre", "Post")
+        
+        ## Row annotations
+        taxa <- unique(test_gene$taxon)
+        
+        cols <- RColorBrewer::brewer.pal(max(3, length(taxa)), "Set2")[seq_along(taxa)]
+        
+        taxa_colors <- setNames(cols, taxa)
+        row_ha <- rowAnnotation(
+          Study = test_gene$study_id,
+          Taxon = test_gene$taxon,
+          col = list(
+            Study = c(
+              CHN = "#66C2A5",
+              MH1 = "#FC8D62",
+              MH3 = "#8DA0CB"
+            ),
+            Taxon = taxa_colors
+          ),
+          annotation_name_side = "top"
+        )
+        
+        ## Color scale
+        lim <- max(abs(heat_mat))
+        if(direction_es=="positive"){
+          col_fun = colorRamp2(
+            c(0, lim/2, lim),
+            c("white","#FB9A99","#B2182B")
+          )
+        }else{
+          col_fun = colorRamp2(
+            c(-lim,-lim/2,0),
+            c("#131e3a","#03396c","white")
+          )
+        }
+        
+        ## Heatmap
+        gene_preVpost_hm=Heatmap(
+          heat_mat,
+          name = "Effect size",
+          left_annotation = row_ha,
+          cluster_rows = FALSE,
+          cluster_columns = FALSE,
+          row_names_side = "right",
+          column_names_side = "bottom",
+          col = col_fun)
+      } #close of if
+    else {
+      return(NULL)
+    }
+      
+    return(gene_preVpost_hm)
+    })
+  
+  return(list(taxa_level_heatmap = taxa_preVpost_hm,
+              gene_level_heatmap = genePrevPost))
 }
+    
+
+  
+
+
+preVpost_HeatmapMake(direction_es = "positive",
+                     merge_resPre = merge_res,
+                     res_listPost = res_list)[[2]]
 
 
 
