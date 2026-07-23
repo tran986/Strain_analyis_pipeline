@@ -678,9 +678,7 @@ preVpost_HeatmapMake = function(direction_es, merge_resPre, res_listPost) {
   
 
 
-preVpost_HeatmapMake(direction_es = "positive",
-                     merge_resPre = merge_res,
-                     res_listPost = res_list)[[2]]
+
 
 
 

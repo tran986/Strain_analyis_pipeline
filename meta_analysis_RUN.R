@@ -183,110 +183,24 @@ merge_res=read.csv(paste0(working_dir,"/all-results-merged-3ds.csv"))
 Pre_mergePlot(mergeRes = merge_res)
 
 #----------pipeline1 AND pipeline 2:
+#function returns 2 heatmaps:
+#1 is Taxa-level:
 #how much of each study_id's all-result (post-Phylogenize merging) 
 #taxa overlaps with all-results of pre-Phylogenize merging:
+
+#2 is GENE LEVEL:
+#Identify taxa AND genes that overlaps bw
+# post-Phylogenize 
+# and pre-Phylogenize merging-> compare their ES:
 
 preVpost_HeatmapMake(direction_es="positive",
                      merge_resPre = merge_res,
                      res_listPost = res_list)
 
-preVpost_HeatmapMake(direction_es="negative",
+
+preVpost_HeatmapMake(direction_es = "negative",
                      merge_resPre = merge_res,
                      res_listPost = res_list)
-
-
-# GENE LEVEL:
-#Identify taxa AND genes that overlaps bw
-# post-Phylogenize 
-# and pre-Phylogenize merging-> compare their ES:
-
-
-
-overlap_gene_heatmapMake=function(res_lis, )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-lapply(seq_along(res_list), function(i) {
-  inner_join(merge_res[merge_res$q.value<0.05 & merge_res$effect.size < 0,],
-             res_list[[i]][res_list[[i]]$effect.size < 0,],
-             by = c("gene", "taxon")) |> 
-    dplyr::select(taxon, gene, effect.size.x, effect.size.y) |>
-    dplyr::rename("effect.size_pre"="effect.size.x",
-                  "effect.size"="effect.size.y") |>
-    left_join(annotation_df, by = "gene") |>
-    mutate(study_id = names(res_list)[i])
-})
-
-test_gene=inner_join(merge_res[merge_res$q.value<0.05 & merge_res$effect.size < 0,],
-                     res_list[[2]][res_list[[2]]$effect.size < 0,],
-                     by = c("gene", "taxon")) |> 
-  dplyr::select(taxon, gene, effect.size.x, effect.size.y) |>
-  dplyr::rename("effect.size_pre"="effect.size.x",
-                "effect.size"="effect.size.y") |>
-  left_join(annotation_df, by = "gene") |>
-  mutate(study_id = names(res_list)[2])  
-
-
-test_gene=test_gene |> select(-accession, -`function`) 
-
-## Matrix of effect sizes
-heat_mat <- test_gene |>
-  dplyr::select(effect.size_pre, effect.size) |>
-  mutate(across(everything(), as.numeric)) |>
-  as.matrix()
-
-rownames(heat_mat) <- test_gene$gene
-colnames(heat_mat) <- c("Pre", "Post")
-
-## Row annotations
-row_ha <- rowAnnotation(
-  Study = test_gene$study_id,
-  Taxon = test_gene$taxon,
-  col = list(
-    Study = c(
-      CHN = "#66C2A5",
-      MH1 = "#FC8D62",
-      MH3 = "#8DA0CB"
-    ),
-    Taxon = c(
-      Coriobacteriaceae = "#E41A1C",
-      Lachnospiraceae   = "#377EB8",
-      Ruminococcaceae   = "#4DAF4A"
-    )
-  ),
-  annotation_name_side = "top"
-)
-
-## Color scale
-lim <- max(abs(heat_mat))
-
-col_fun <- circlize::colorRamp2(
-  c(-lim, -lim/2, 0),
-  c("#131e3a", "#03396c", "white")
-)
-
-## Heatmap
-Heatmap(
-  heat_mat,
-  name = "Effect size",
-  left_annotation = row_ha,
-  cluster_rows = FALSE,
-  cluster_columns = FALSE,
-  row_names_side = "right",
-  column_names_side = "bottom",
-  col = col_fun
-)
 
 
 #---Expand to more datasets:
