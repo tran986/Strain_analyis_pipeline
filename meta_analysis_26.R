@@ -11,6 +11,7 @@ library(ape)
 library(picante)
 library(UpSetR)
 library(circlize)
+library(curatedMetagenomicData)
 #devtools::load_all("/fs/project/bradley.720/projects/phylogenize_v2/phylogenize_repermulize/package/repermulize")
 devtools::load_all("/Users/tran.986/Desktop/phylogenize/package/phylogenize")
 
@@ -534,7 +535,9 @@ pre_v_postFind_eachStudy <- function(merge_resPre, res_listPost, direction_es) {
   return(result)
 }
 
-#12 OPTIONAL. a function to make a heatmap from function 11:
+#12 OPTIONAL. a function to make 2 heatmaps from function 11:
+#1 is at taxa level: which each study_id (post Merge) taxa overlapping w that to pre-Merge
+#2 is at gene level: same as above but es comapred for those shared gene/taxa.
 preVpost_HeatmapMake = function(direction_es, merge_resPre, res_listPost) {
   
   # TAXA LEVEL:
@@ -674,6 +677,28 @@ preVpost_HeatmapMake = function(direction_es, merge_resPre, res_listPost) {
               gene_level_heatmap = genePrevPost))
 }
     
+#------Expand to other datasets:
+# explicitly loads it into your environment:
+#13. function to retrieve metadata info for each T2D studies found in curatedMetagenomicData:
+metadataRetrieve=function(study_id) #
+{
+  study_code=data.frame(
+    name_CM = c("SankaranarayananK_2015","MetaCardis_2020_a","HMP_2019_t2d"),
+    id = c("SKK","MCA","HMP"))
+  
+  std_name = study_code[study_code$id == study_id,]$name_CM 
+  metadata = lapply(c("control","T2D"), function(x) #create metadata where [[1]] is for control, [[2]] is for T2D.
+  {
+    subj = sampleMetadata |> 
+      filter(study_name == std_name,
+             study_condition == x) |>
+      dplyr::select(study_name, antibiotics_current_use, sample_id,
+                    disease, NCBI_accession, treatment)  
+    subj
+  })
+}
+
+
 
   
 

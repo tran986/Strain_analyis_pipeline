@@ -204,9 +204,6 @@ preVpost_HeatmapMake(direction_es = "negative",
 
 
 #---Expand to more datasets:
-library(curatedMetagenomicData)
-#MetaCardis -- Molinaro et al: Imidazole propionate is increased in diabetes and associated with dietary patterns and altered microbial ecology
-data("sampleMetadata")   # explicitly loads it into your environment
 #             HMP_2019_t2d --> HMP (not started)
 #         KarlssonFH_2013 --> MH3 (done)
 #                LiJ_2014 --> MH1 (done)
@@ -214,10 +211,6 @@ data("sampleMetadata")   # explicitly loads it into your environment
 #              QinJ_2012 --> CHN (done)
 # SankaranarayananK_2015 --> SKK (not started)
 
-#making metadata for each T2D studies found in curatedMetagenomicData:
-ctrl_subj= sampleMetadata |> 
-  filter(study_name == "MetaCardis_2020_a",
-         study_condition == "control" &
-         disease == "healthy") 
 
+#MetaCardis -- Molinaro et al: Imidazole propionate is increased in diabetes and associated with dietary patterns and altered microbial ecology
 
