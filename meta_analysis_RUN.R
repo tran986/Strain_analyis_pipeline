@@ -213,4 +213,8 @@ preVpost_HeatmapMake(direction_es = "negative",
 
 
 #MetaCardis -- Molinaro et al: Imidazole propionate is increased in diabetes and associated with dietary patterns and altered microbial ecology
+names(metadataRetrieve(study_id = "MCA")[1])
+metadataRetrieve(study_id = "MCA")[[1]]
 
+ctrl_MCA_sampleid=sampleidRetrieve(study_id = "MCA")[[1]] #control
+t2d_MCA_sampleid=sampleidRetrieve(study_id = "MCA")[[2]] #t2d

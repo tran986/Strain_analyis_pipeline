@@ -682,25 +682,40 @@ preVpost_HeatmapMake = function(direction_es, merge_resPre, res_listPost) {
 #13. function to retrieve metadata info for each T2D studies found in curatedMetagenomicData:
 metadataRetrieve=function(study_id) #
 {
+  #study_id = "MCA"
   study_code=data.frame(
     name_CM = c("SankaranarayananK_2015","MetaCardis_2020_a","HMP_2019_t2d"),
     id = c("SKK","MCA","HMP"))
   
   std_name = study_code[study_code$id == study_id,]$name_CM 
-  metadata = lapply(c("control","T2D"), function(x) #create metadata where [[1]] is for control, [[2]] is for T2D.
+  metadata = lapply(c("healthy","T2D"), function(x) #create metadata where [[1]] is for control, [[2]] is for T2D.
   {
     subj = sampleMetadata |> 
       filter(study_name == std_name,
-             study_condition == x) |>
+             disease == x) |>
       dplyr::select(study_name, antibiotics_current_use, sample_id,
                     disease, NCBI_accession, treatment)  
     subj
   })
+  names(metadata)<-c("healthy","T2D")
+  return(metadata)
 }
 
-
-
+sampleidRetrieve=function(study_id) {
+  lapply(metadataRetrieve(study_id = study_id), function(t) {
+    t |> pull(NCBI_accession) |>
+      lapply(function(row) {
+        each_row = data.frame(strsplit(row, split = ";"))
+        colnames(each_row)<-"sample_id"
+        each_row
+      }) |> bind_rows()
+  })
+}
   
+
+
+
+       
 
 
 
