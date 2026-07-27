@@ -213,8 +213,21 @@ preVpost_HeatmapMake(direction_es = "negative",
 
 
 #MetaCardis -- Molinaro et al: Imidazole propionate is increased in diabetes and associated with dietary patterns and altered microbial ecology
-names(metadataRetrieve(study_id = "MCA")[1])
-metadataRetrieve(study_id = "MCA")[[1]]
+metadata_MCA_ctrl=metadataRetrieve(study_id = "MCA")[["healthy"]]
+metadata_MCA_t2d=metadataRetrieve(study_id = "MCA")[["T2D"]]
 
-ctrl_MCA_sampleid=sampleidRetrieve(study_id = "MCA")[[1]] #control
-t2d_MCA_sampleid=sampleidRetrieve(study_id = "MCA")[[2]] #t2d
+#run seq_Retrieve to obtain the URL --> URL will download an API -->
+#API will return fastq_ftp on HPC:
+ctrl_MCA_seqid=sampleidRetrieve(metadata_MCA_ctrl)
+t2d_MCA_seqid=sampleidRetrieve(metadata_MCA_t2d)
+
+#write.table(ctrl_MCA_seqid, file = paste0(working_dir, "/ctrl_MCA_URL.txt"),
+#            sep = "\t", row.names = FALSE, quote = FALSE)
+
+#write.table(t2d_MCA_seqid, file = paste0(working_dir, "/t2d_MCA_URL.txt"),
+#            sep = "\t", row.names = FALSE, quote = FALSE)
+
+
+ 
+
+

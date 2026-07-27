@@ -2,6 +2,7 @@ library(TreeSummarizedExperiment)
 library(dplyr)
 library(tidyverse)
 library(readxl)
+library(httr2)
 library(readr)
 library(purrr)
 library(dplyr)
@@ -680,14 +681,15 @@ preVpost_HeatmapMake = function(direction_es, merge_resPre, res_listPost) {
 #------Expand to other datasets:
 # explicitly loads it into your environment:
 #13. function to retrieve metadata info for each T2D studies found in curatedMetagenomicData:
-metadataRetrieve=function(study_id) #
+#output a list of metadata control and metadata t2d:
+metadataRetrieve=function(study_id, metformin) #
 {
-  #study_id = "MCA"
+
   study_code=data.frame(
     name_CM = c("SankaranarayananK_2015","MetaCardis_2020_a","HMP_2019_t2d"),
     id = c("SKK","MCA","HMP"))
   
-  std_name = study_code[study_code$id == study_id,]$name_CM 
+  std_name = study_code[study_code$id == study_id,]$name_CM
   metadata = lapply(c("healthy","T2D"), function(x) #create metadata where [[1]] is for control, [[2]] is for T2D.
   {
     subj = sampleMetadata |> 
@@ -698,25 +700,39 @@ metadataRetrieve=function(study_id) #
     subj
   })
   names(metadata)<-c("healthy","T2D")
+  
+  #----filter out those used antibiotics for control:
+  #----filter out those used metformin:
+  metadata = lapply(metadata, function(t) 
+    t |> filter(!grepl("metformin", treatment),
+                antibiotics_current_use != "yes"))
+  
   return(metadata)
 }
 
-sampleidRetrieve=function(study_id) {
-  lapply(metadataRetrieve(study_id = study_id), function(t) {
-    t |> pull(NCBI_accession) |>
-      lapply(function(row) {
-        each_row = data.frame(strsplit(row, split = ";"))
-        colnames(each_row)<-"sample_id"
-        each_row
-      }) |> bind_rows()
-  })
-}
+#14. a function to get sample ID --> obtain URL --> export to retrieve the fasta on HPC:
+sampleidRetrieve <- function(metadataRetrieve_out) {
   
-
-
-
-       
-
+  sampleDf <- metadataRetrieve_out |>
+    filter(!is.na(NCBI_accession)) |>
+    pull(NCBI_accession) |>
+    strsplit(";") |>
+    unlist() |>
+    trimws() |>
+    data.frame(sample_id = _)
+  
+  sampleDf <- sampleDf |>
+    filter(sample_id != "")
+  
+  sampleDf$URL <- paste0(
+    "https://www.ebi.ac.uk/ena/portal/api/filereport?",
+    "accession=", sampleDf$sample_id,
+    "&result=read_run",
+    "&fields=fastq_ftp"
+  )
+  
+  sampleDf
+}
 
 
 
