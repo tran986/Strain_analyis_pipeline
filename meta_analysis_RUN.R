@@ -207,25 +207,44 @@ preVpost_HeatmapMake(direction_es = "negative",
 #             HMP_2019_t2d --> HMP (not started)
 #         KarlssonFH_2013 --> MH3 (done)
 #                LiJ_2014 --> MH1 (done)
-#      MetaCardis_2020_a --> MCA (in progress)
+#      MetaCardis_2020_a --> MCA (started - in progress) 
 #              QinJ_2012 --> CHN (done)
 # SankaranarayananK_2015 --> SKK (not started)
 
+#---MetaCardis -- Molinaro et al: Imidazole propionate is increased in diabetes and associated with dietary patterns and altered microbial ecology
+metadata_MCA_ctrl = metadataRetrieve(study_id = "MCA")[["healthy"]]
+metadata_MCA_t2d = metadataRetrieve(study_id = "MCA")[["T2D"]]
 
-#MetaCardis -- Molinaro et al: Imidazole propionate is increased in diabetes and associated with dietary patterns and altered microbial ecology
-metadata_MCA_ctrl=metadataRetrieve(study_id = "MCA")[["healthy"]]
-metadata_MCA_t2d=metadataRetrieve(study_id = "MCA")[["T2D"]]
+#---SankaranarayananK_2015: Gut Microbiome Diversity among Cheyenne and Arapaho Individuals from Western Oklahoma
+metadata_SKK_ctrl = metadataRetrieve(study_id = "SKK")[["healthy"]]
+metadata_SKK_t2d = metadataRetrieve(study_id = "SKK")[["T2D"]]
 
 #run seq_Retrieve to obtain the URL --> URL will download an API -->
 #API will return fastq_ftp on HPC:
+
+#---MetaCardis:
 ctrl_MCA_seqid=sampleidRetrieve(metadata_MCA_ctrl)
 t2d_MCA_seqid=sampleidRetrieve(metadata_MCA_t2d)
-
 #write.table(ctrl_MCA_seqid, file = paste0(working_dir, "/ctrl_MCA_URL.txt"),
 #            sep = "\t", row.names = FALSE, quote = FALSE)
 
 #write.table(t2d_MCA_seqid, file = paste0(working_dir, "/t2d_MCA_URL.txt"),
 #            sep = "\t", row.names = FALSE, quote = FALSE)
+
+
+#---SankaranarayananK_2015:
+ctrl_SKK_seqid=ftpRetrieve(metadata_SKK_ctrl)
+t2d_SKK_seqid=ftpRetrieve(metadata_SKK_t2d)
+
+#write.table(ctrl_SKK_seqid, file = paste0(working_dir, "/ctrl_SKK_URL.txt"),
+#            sep = "\t", row.names = FALSE, quote = FALSE)
+
+#write.table(t2d_SKK_seqid, file = paste0(working_dir, "/t2d_SKK_URL.txt"),
+#            sep = "\t", row.names = FALSE, quote = FALSE)
+
+
+
+
 
 
  

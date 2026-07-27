@@ -710,8 +710,8 @@ metadataRetrieve=function(study_id, metformin) #
   return(metadata)
 }
 
-#14. a function to get sample ID --> obtain URL --> export to retrieve the fasta on HPC:
-sampleidRetrieve <- function(metadataRetrieve_out) {
+#14. a function to get sample ID --> obtain URL --> use that URL to retrieve the fastq_ftp:
+ftpRetrieve <- function(metadataRetrieve_out) {
   
   sampleDf <- metadataRetrieve_out |>
     filter(!is.na(NCBI_accession)) |>
@@ -731,10 +731,18 @@ sampleidRetrieve <- function(metadataRetrieve_out) {
     "&fields=fastq_ftp"
   )
   
-  sampleDf
+  colnames(sampleDf)<-c("sample_id", "URL")
+  
+  #map URL with fastp_ftp:
+  #sampleDf=ctrl_SKK_seqid
+  sampleDf$fastq_ftp <- lapply(seq_len(nrow(sampleDf)), function(i){
+    url = sampleDf[i, ]$URL
+    txt = httr::content(httr::GET(url),
+                  as = "text", 
+                  encoding = "UTF-8")
+    fastq_ftp = strsplit(txt, "\n")[[1]][2] |> strsplit("\t") |> (\(y) y[[1]][2])()
+  })
+  
+  return(sampleDf)
 }
-
-
-
-
 
