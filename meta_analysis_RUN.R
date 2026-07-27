@@ -203,7 +203,7 @@ preVpost_HeatmapMake(direction_es = "negative",
                      res_listPost = res_list)
 
 
-#---Expand to more datasets:
+#-----------------------================================-----------Expand to more datasets:
 #             HMP_2019_t2d --> HMP (not started)
 #         KarlssonFH_2013 --> MH3 (done)
 #                LiJ_2014 --> MH1 (done)
@@ -222,23 +222,25 @@ metadata_SKK_t2d = metadataRetrieve(study_id = "SKK")[["T2D"]]
 #run seq_Retrieve to obtain the URL --> URL will download an API -->
 #API will return fastq_ftp on HPC:
 
-#---MetaCardis:
-ctrl_MCA_seqid=sampleidRetrieve(metadata_MCA_ctrl)
-t2d_MCA_seqid=sampleidRetrieve(metadata_MCA_t2d)
-#write.table(ctrl_MCA_seqid, file = paste0(working_dir, "/ctrl_MCA_URL.txt"),
-#            sep = "\t", row.names = FALSE, quote = FALSE)
+#---MetaCardis:-this takes extreme long- DONOT RERUN - just read it locally"
+ctrl_MCA_seqid=ftpRetrieve(metadata_MCA_ctrl)
+t2d_MCA_seqid=ftpRetrieve(metadata_MCA_t2d)
+        
+MCA_seqid = rbind(ctrl_MCA_seqid,
+                  t2d_MCA_seqid)
 
-#write.table(t2d_MCA_seqid, file = paste0(working_dir, "/t2d_MCA_URL.txt"),
-#            sep = "\t", row.names = FALSE, quote = FALSE)
+#write.table(MCA_seqid, file = paste0(working_dir,"/fastq_url/MCA_fastq_url.txt"), sep = "\t", row.names = FALSE)
 
 
 #---SankaranarayananK_2015:
 ctrl_SKK_seqid=ftpRetrieve(metadata_SKK_ctrl)
 t2d_SKK_seqid=ftpRetrieve(metadata_SKK_t2d)
 
+#SKK_seqid = rbind(ctrl_SKK_seqid,
+#                  t2d_SKK_seqid)
 
-#write.table(t2d_SKK_seqid, file = paste0(working_dir, "/t2d_SKK_URL.txt"),
-#            sep = "\t", row.names = FALSE, quote = FALSE)
+#write.table(SKK_seqid, file = paste0(working_dir,"/fastq_url/SKK_fastq_url.txt"), sep = "\t", row.names = FALSE)
+
 
 
 
