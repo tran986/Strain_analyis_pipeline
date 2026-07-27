@@ -236,8 +236,6 @@ t2d_MCA_seqid=sampleidRetrieve(metadata_MCA_t2d)
 ctrl_SKK_seqid=ftpRetrieve(metadata_SKK_ctrl)
 t2d_SKK_seqid=ftpRetrieve(metadata_SKK_t2d)
 
-#write.table(ctrl_SKK_seqid, file = paste0(working_dir, "/ctrl_SKK_URL.txt"),
-#            sep = "\t", row.names = FALSE, quote = FALSE)
 
 #write.table(t2d_SKK_seqid, file = paste0(working_dir, "/t2d_SKK_URL.txt"),
 #            sep = "\t", row.names = FALSE, quote = FALSE)
