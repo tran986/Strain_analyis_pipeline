@@ -92,6 +92,7 @@ extract_phyloz_metadata=function(import_bracken_out,
   #metadata = CHNs_md_final 
   #clean up metadata:
   if (study_id == "CHN") #then it is from CHN sample "SRR"
+  
     
   {
     metadata_clean=metadata[,c("Run", "Status")] %>%
@@ -712,7 +713,7 @@ metadataRetrieve=function(study_id, metformin) #
 
 #14. a function to get sample ID --> obtain URL --> use that URL to retrieve the fastq_ftp:
 ftpRetrieve <- function(metadataRetrieve_out) {
-  #metadataRetrieve_out = metadata_SKK_t2d
+  #metadataRetrieve_out = metadata_MCA_t2d
   sampleDf <- metadataRetrieve_out |>
     filter(!is.na(NCBI_accession)) |>
     pull(NCBI_accession) |>
@@ -748,6 +749,7 @@ ftpRetrieve <- function(metadataRetrieve_out) {
     cbind(sampleDf) %>%
     separate_rows("fastq_ftp", sep = ";") 
   
-  return(fastq_df)
+  return(list(sample_list = sampleDf,
+              fastq_df = fastq_df))
 }
 

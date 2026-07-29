@@ -225,21 +225,26 @@ metadata_SKK_t2d = metadataRetrieve(study_id = "SKK")[["T2D"]]
 #---MetaCardis:-this takes extreme long- DONOT RERUN - just read it locally"
 ctrl_MCA_seqid=ftpRetrieve(metadata_MCA_ctrl)
 t2d_MCA_seqid=ftpRetrieve(metadata_MCA_t2d)
-        
-MCA_seqid = rbind(ctrl_MCA_seqid,
-                  t2d_MCA_seqid)
 
-#write.table(MCA_seqid, file = paste0(working_dir,"/fastq_url/MCA_fastq_url.txt"), sep = "\t", row.names = FALSE)
+#save fastq_df to run download.sh
+MCA_seqid = rbind(ctrl_MCA_seqid$fastq_df,
+                  t2d_MCA_seqid$fastq_df)
 
+#write.table(MCA_seqid[c("fastq_ftp")], file = paste0(working_dir,"/fastq_url/MCA_fastq_url.txt"), sep = "\t", row.names = FALSE)
+#process $sample_list to run extract_phyloz_metadata --> phylogenize_full_func:
+MCA_md_final=rbind(ctrl_MCA_seqid$sample_list["sample_id"] |> dplyr::mutate(env="ND CTRL"),
+                   t2d_MCA_seqid$sample_list["sample_id"] |> dplyr::mutate(env = "T2D metformin-")) 
+
+write.csv(MCA_md_final, file = paste0(workind_dir, "/metadata/MCA_md_final.csv"))
 
 #---SankaranarayananK_2015:
 ctrl_SKK_seqid=ftpRetrieve(metadata_SKK_ctrl)
 t2d_SKK_seqid=ftpRetrieve(metadata_SKK_t2d)
 
-#SKK_seqid = rbind(ctrl_SKK_seqid,
-#                  t2d_SKK_seqid)
+SKK_seqid = rbind(ctrl_SKK_seqid,
+                  t2d_SKK_seqid)
 
-#write.table(SKK_seqid, file = paste0(working_dir,"/fastq_url/SKK_fastq_url.txt"), sep = "\t", row.names = FALSE)
+write.table(SKK_seqid[c("fastq_ftp")], file = paste0(working_dir,"/fastq_url/SKK_fastq_url_fix.txt"), sep = "\t", row.names = FALSE)
 
 
 
