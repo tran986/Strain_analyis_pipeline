@@ -214,15 +214,6 @@ preVpost_HeatmapMake(direction_es = "negative",
 #---MetaCardis -- Molinaro et al: Imidazole propionate is increased in diabetes and associated with dietary patterns and altered microbial ecology
 metadata_MCA_ctrl = metadataRetrieve(study_id = "MCA")[["healthy"]]
 metadata_MCA_t2d = metadataRetrieve(study_id = "MCA")[["T2D"]]
-
-#---SankaranarayananK_2015: Gut Microbiome Diversity among Cheyenne and Arapaho Individuals from Western Oklahoma
-metadata_SKK_ctrl = metadataRetrieve(study_id = "SKK")[["healthy"]]
-metadata_SKK_t2d = metadataRetrieve(study_id = "SKK")[["T2D"]]
-
-#run seq_Retrieve to obtain the URL --> URL will download an API -->
-#API will return fastq_ftp on HPC:
-
-#---MetaCardis:-this takes extreme long- DONOT RERUN - just read it locally"
 ctrl_MCA_seqid=ftpRetrieve(metadata_MCA_ctrl)
 t2d_MCA_seqid=ftpRetrieve(metadata_MCA_t2d)
 
@@ -233,23 +224,35 @@ MCA_seqid = rbind(ctrl_MCA_seqid$fastq_df,
 #write.table(MCA_seqid[c("fastq_ftp")], file = paste0(working_dir,"/fastq_url/MCA_fastq_url.txt"), sep = "\t", row.names = FALSE)
 #process $sample_list to run extract_phyloz_metadata --> phylogenize_full_func:
 MCA_md_final=rbind(ctrl_MCA_seqid$sample_list["sample_id"] |> dplyr::mutate(env="ND CTRL"),
-                   t2d_MCA_seqid$sample_list["sample_id"] |> dplyr::mutate(env = "T2D metformin-")) 
+                   t2d_MCA_seqid$sample_list["sample_id"] |> dplyr::mutate(env = "T2D metformin-")) |>
+  dplyr::rename("sample"="sample_id")
 
-write.csv(MCA_md_final, file = paste0(workind_dir, "/metadata/MCA_md_final.csv"))
+write.csv(MCA_md_final, file = paste0(working_dir, "/metadata/MCA_md_final.csv"))
+phylogenize_full_func(study_id = "MCA",
+                      metadata_dir_path = paste0(working_dir, "/metadata/MCA_md_final.csv"),
+                      ref_env = "T2D metformin-",
+                      envs_compared = c("ND CTRL", "T2D metformin-"))
 
-#---SankaranarayananK_2015:
+
+#---SankaranarayananK_2015: Gut Microbiome Diversity among Cheyenne and Arapaho Individuals from Western Oklahoma
+metadata_SKK_ctrl = metadataRetrieve(study_id = "SKK")[["healthy"]]
+metadata_SKK_t2d = metadataRetrieve(study_id = "SKK")[["T2D"]]
 ctrl_SKK_seqid=ftpRetrieve(metadata_SKK_ctrl)
 t2d_SKK_seqid=ftpRetrieve(metadata_SKK_t2d)
 
-SKK_seqid = rbind(ctrl_SKK_seqid,
-                  t2d_SKK_seqid)
+#save fastq_df to run download.sh
+SKK_seqid = rbind(ctrl_SKK_seqid$fastq_df,
+                  t2d_SKK_seqid$fastq_df)
 
-write.table(SKK_seqid[c("fastq_ftp")], file = paste0(working_dir,"/fastq_url/SKK_fastq_url_fix.txt"), sep = "\t", row.names = FALSE)
+#write.table(SKK_seqid[c("fastq_ftp")], file = paste0(working_dir,"/fastq_url/SKK_fastq_url.txt"), sep = "\t", row.names = FALSE)
 
-
-
-
-
+SKK_md_final=rbind(ctrl_SKK_seqid$sample_list["sample_id"] |> dplyr::mutate(env="ND CTRL"),
+                   t2d_SKK_seqid$sample_list["sample_id"] |> dplyr::mutate(env = "T2D metformin-")) 
+write.csv(SKK_md_final, paste0(working_dir, "/metadata/SKK_md_final.csv"))                   
+phylogenize_full_func(study_id = "SKK",
+                      metadata_dir_path = paste0(working_dir, "/metadata/SKK_md_final.csv"),
+                      ref_env = "T2D metformin-",
+                      envs_compared = c("ND CTRL", "T2D metformin-"))
 
 
  

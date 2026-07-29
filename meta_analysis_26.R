@@ -86,32 +86,36 @@ import_bracken=function(study_id) {
 #3. function to create phylogenize input:
 extract_phyloz_metadata=function(import_bracken_out, 
                                  metadata,
-                                 study_id, #study_id = CHN, MHN1, MHN3, 4, etc
+                                 study_id, #study_id = CHN, MHN1, MHN3, 4, SKK, MCA, etc..
                                  envs_compared = c("ND CTRL", "T2D metformin-")) { 
   #import_bracken_out = test
   #metadata = CHNs_md_final 
   #clean up metadata:
   if (study_id == "CHN") #then it is from CHN sample "SRR"
-  
     
-  {
+  { #CHN dataset:
     metadata_clean=metadata[,c("Run", "Status")] %>%
       dplyr::rename("env"="Status",
                     "sample"="Run") %>%
       dplyr::mutate(dataset = study_id)
     
   } else { #all MHN studies with "ERR" samples
-    metadata_clean = metadata %>% 
-      dplyr::mutate(sample = str_extract(fastq_ftp, "(?<=/)[^/]+(?=/[^/]+\\.fastq\\.gz)"),
-                    dataset = study_id) %>%
-      dplyr::select(Status, sample, dataset) %>%
-      dplyr::rename("env"="Status")
+    if (study_id %in% c("ERP004605_MH1","ERP002468_MH3")) {
+      metadata_clean = metadata %>% 
+        dplyr::mutate(sample = str_extract(fastq_ftp, "(?<=/)[^/]+(?=/[^/]+\\.fastq\\.gz)"),
+                      dataset = study_id) %>%
+        dplyr::select(Status, sample, dataset) %>%
+        dplyr::rename("env"="Status")
+    } else { #SKK and MCA studies from curatedmetagenomics:
+      metadata_clean = metadata |>
+        dplyr::mutate(dataset = study_id) 
+    }
   }
   
   #filter 2 envs that will be compared:
   metadata_filter=metadata_clean %>% filter(env %in% envs_compared)
   
-  write.table(metadata_filter, file = paste0(working_dir, "/phylogenize_out/", study_id, "/metadata_filter.tsv"), sep = "\t", row.names = FALSE, quote = FALSE)
+  write.table(metadata_filter, file = paste0(working_dir, "/pipeline1/phylogenize_out/", study_id, "/metadata_filter.tsv"), sep = "\t", row.names = FALSE, quote = FALSE)
   return(metadata_filter)
   
 }
@@ -127,16 +131,16 @@ phylogenize_run=function(provided_file_path = NULL,
                          ref_env) { #"ND CTRL or T2D metformin-
   if (phenotype == "abundance") {
     res=phylogenize(
-      output_file = paste0(working_dir, "/phylogenize_out/", study_id, "/phylogenize.html"),
-      out_dir = paste0(working_dir, "/phylogenize_out/", study_id),
+      output_file = paste0(working_dir, "/pipeline1/phylogenize_out/", study_id, "/phylogenize.html"),
+      out_dir = paste0(working_dir, "/pipeline1/phylogenize_out/", study_id),
       data_dir = dataset_dir,
       db = "human-gut",
       taxon_level = "family",
       type_16S=F,
       which_phenotype = phenotype,
       diff_abund_method = "ancombc2",
-      abundance_file = paste0(working_dir, "/phylogenize_out/", study_id, "/data_w_count.tsv"),
-      metadata_file = paste0(working_dir, "/phylogenize_out/", study_id, "/metadata_filter.tsv"),
+      abundance_file = paste0(working_dir, "/pipeline1/phylogenize_out/", study_id, "/data_w_count.tsv"),
+      metadata_file = paste0(working_dir, "/pipeline1/phylogenize_out/", study_id, "/metadata_filter.tsv"),
       which_envir = ref_env, 
       env_column = "env",
       sample_column = "sample",
