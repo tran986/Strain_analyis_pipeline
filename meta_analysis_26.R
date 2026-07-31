@@ -164,7 +164,7 @@ phylogenize_run=function(provided_file_path = NULL,
       ncl = parallelly::availableCores())
     
   }
-  saveRDS(res, paste0(working_dir, "/phylogenize_out/", study_id, "/phylogenize.rds"))
+  #saveRDS(res, paste0(working_dir, "/phylogenize_out/", study_id, "/phylogenize.rds"))
   return(res)
 }
 
@@ -197,6 +197,7 @@ ancomRun = function(count_tbl, study_id, metadata){
               count_input = count_tbl_clean,
               metadata_input = metadata_tbl))
 }
+
 
 
 #6. function to calculate combined mu and combined se:

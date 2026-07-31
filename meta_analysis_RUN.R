@@ -115,6 +115,102 @@ study_id_ls = c("CHN", "ERP004605_MH1",
 #                phenotype = "provided",
 #                ref_env = c("T2D metformin-"))
 
+#---------------------------------------------pipeline2: merge pre-phylogenize:
+#--step 1: run ancombc2
+#import_bracken_CHN=read_tsv(paste0(working_dir, "/pipeline1/phylogenize_out/CHN/data_w_count.tsv"))
+#import_bracken_MH1=read_tsv(paste0(working_dir, "/pipeline1/phylogenize_out/ERP004605_MH1/data_w_count.tsv"))
+#import_bracken_MH3=read_tsv(paste0(working_dir, "/pipeline1/phylogenize_out/ERP002469_MH3/data_w_count.tsv"))
+#import_bracken_MCA=read_tsv(paste0(working_dir, "/pipeline1/phylogenize_out/MCA/data_w_count.tsv"))
+#import_bracken_SKK = read_tsv(paste0(working_dir, "/pipeline1/phylogenize_out/SKK/data_w_count.tsv"))
+
+
+#count_tbl_ls = list(MCA = import_bracken_MCA,
+#		    SKK = import_bracken_SKK)
+#CHN = import_bracken_CHN,
+#     ERP004605_MH1 = import_bracken_MH1,
+#     ERP002469_MH3 = import_bracken_MH3)
+
+#metadata_tbl_ls = list(MCA = read_csv(paste0(working_dir, "/metadata/MCA_md_final.csv")),
+#		       SKK = read_csv(paste0(working_dir, "/metadata/SKK_md_final.csv")))
+
+
+#CHN = read_csv(paste0(working_dir,"/metadata/CHN_md_final.csv")),
+#ERP004605_MH1 =  read_csv(paste0(working_dir,"/metadata/mhn1_md_final.csv")),
+#ERP002469_MH3 = read_csv(paste0(working_dir,"/metadata/mhn3_md_final.csv")))
+
+study_id_ls = c("MCA", "SKK", "CHN", "ERP004605_MH1","ERP002469_MH3")
+
+
+#run through all of the items in the list:
+#all_ancom_res <- lapply(seq_along(study_id_ls), function(i) {
+#	cat("\nRunning", study_id_ls[i], "\n")
+#        ancomRun(count_tbl = count_tbl_ls[[i]],
+#	study_id = study_id_ls[i],
+#	metadata = metadata_tbl_ls[[i]])
+#})
+
+#names(all_ancom_res) <- study_id_ls
+
+#saveRDS(all_ancom_res,
+#	paste0(working_dir, "/pipeline2/ancom/all_ancom_res_MCA_SKK.rds"))
+
+#---step 2: combine ancombc w fixed effect?
+#ancom_out_ls = lapply(study_id_ls, function(id) 
+#       readRDS(paste0(working_dir, "/pipeline2/ancom/", id, "_ancombc_res.rds"))
+#       )
+#--calculate weight per taxon for each study_id:
+#weight_per_taxon=weight_per_taxonCal(ancomRun_output_ls = ancom_out_ls,
+#		    study_id_ls = study_id_ls)
+
+#--calculate the sum of weights per taxon across studies:
+#sigma_weight_per_taxon=sigma_weightCal(weight_per_taxon_ls = weight_per_taxon)
+#write.csv(sigma_weight_per_taxon, paste0(working_dir, "/pipeline2/ancom/combine/sigma_weight_5studies.csv"))
+
+#--calculate the SE pooled:
+#se_pooled=SE_poolCal(sigma_weightCal_out = sigma_weight_per_taxon)
+#write.csv(se_pooled, paste0(working_dir, "/pipeline2/ancom/combine/se_pooled_5studies.csv"))
+
+#--for each study_id, 
+#--calculate the product of weight (per_taxon) * effect_size (of that taxon) 
+#sum_prod_weight_mu=sum_prod_weightCal(weight_per_taxon_ls = weight_per_taxon,
+#				      study_id_ls = study_id_ls)
+#write.csv(sum_prod_weight_mu, paste0(working_dir, "/pipeline2/ancom/combine/sum_prod_weight_mu_5studies.csv"))
+
+#--calculate for pooled effect size
+#eff_size_pooled = mu_poolCal(sum_prod_weightCal_out = sum_prod_weight_mu, 
+#			     sigma_weightCal_out = sigma_weight_per_taxon)
+#write.csv(eff_size_pooled, paste0(working_dir, "/pipeline2/ancom/combine/eff_size_pooled_5studies.csv"))
+
+#---step 3: run ashr only once on the combined effect
+#ash_res_pooled=ashRun(mu_poolCal_out = eff_size_pooled,
+#       SE_poolCal_out = se_pooled)
+#write.csv(ash_res_pooled, paste0(working_dir, "/pipeline2/ash/ash_res_pooled_5studies.csv"))
+
+#---step 4: run phylogenize repermulize()
+#preping for provided phenotype file:
+#se_poolCal_out = read.csv(paste0(working_dir,"/pipeline2/ancom/combine/se_pooled_5studies.csv"))
+#mu_poolCal_out = read.csv(paste0(working_dir, "/pipeline2/ancom/combine/eff_size_pooled_5studies.csv"))
+
+#provided_file=inner_join(mu_poolCal_out, se_poolCal_out, 
+#                         by = "taxon")  %>%
+#  dplyr::filter(n_studies == 5) %>% #fix "n_studies" if more datasets are added... 
+#  dplyr::select(taxon, se_pooled, mu_pooled) %>% 
+#  dplyr::rename("estimate"="mu_pooled",
+#                "stderr"="se_pooled")
+
+#write.table(provided_file, 
+#            paste0(working_dir, "/pipeline2/phylogenize/input/phenotype_file_5studies.tsv"),
+#            sep = "\t",
+#            row.names = F, 
+#            quote = F)
+
+#run phylogenize "provided" phenotype:
+#phylogenize_run(provided_file_path = paste0(working_dir,"/pipeline2/phylogenize/input/phenotype_file_5studies.tsv"),
+#                study_id = NULL,
+#                phenotype = "provided",
+#                ref_env = "T2D metformin-")
+
+
 #------------------------------ANALYSIS OF FINAL BIOLOGICAL HITS:
 core_out=readRDS(paste0(working_dir, "/core_output.rds"))
 annotation_df=core_out$list_pheno$pz.db$gene.to.fxn
