@@ -296,9 +296,8 @@ SKK_all_res = readRes_n_pdCal(study_id = "SKK")
 study_id_ls = c("CHN", "MH1", "MH3", "MCA", "SKK") #list of md_final csv, add MCK and SKK if needed
 
 #extract DF (# of case and ctrl subjects) for each study
-extractDF_study_out=extractDF_study(study_id_ls = study_id_ls)
+extractDF_study_list=extractDF_study_func(study_id_ls = study_id_ls)
 
-#convert p-value to t-statistics from each study df and p-value:
 #input: CHN_all_res, MH1_all_res, MH3_all_res, SKK_all_res, MCA_all_res + their id: "MCA", "SKK", "MH1", "MH3", etc
 all_res_list = list(CHN = CHN_all_res,
      MH1 = MH1_all_res,
@@ -306,16 +305,26 @@ all_res_list = list(CHN = CHN_all_res,
      MCA = MCA_all_res,
      SKK = SKK_all_res)
 
-all_tstat=setNames(lapply(seq_along(all_res_list), function(id) {
-       tstatCal(study_id_res = all_res_list[[id]],
-                study_id = names(id),
-                extractDF_study_id = extractDF_study_out[[id]])
-     }), names(all_res_list))
-
-#back-calculate se from effect size and t-statistic
-
+all_variance = lapply(names(all_res_list), function(study_name) {
   
-#get variance from se recovered:
+  #convert p-value to t-statistics from each study df and p-value:
+  all_res_list[[study_name]]$t.statistic = tstatCal(
+    study_id_res = all_res_list[[study_name]],
+    study_id = study_name,
+    extractDF_study_id = extractDF_study_list[[study_name]]
+  )
+  #back-calculate se from effect size and t-statistic
+  all_res_list[[study_name]]$se = se_recCal(
+    study_id_res = all_res_list[[study_name]],
+    tstatCal_out = all_res_list[[study_name]]$t.statistic
+  )
+  #calculate variance for each study from SE
+  all_res_list[[study_name]]$variance = varianceCal(
+    se_recCal_out = all_res_list[[study_name]]$se
+  )
+  all_res_list[[study_name]]
+})
+names(all_variance) = names(all_res_list)
 
 #------- step 2: Plug variance, and study DF into Satterthwaite formula:
 

@@ -760,7 +760,7 @@ ftpRetrieve <- function(metadataRetrieve_out) {
 
 #--------------PIPELINE 1A: using t-statistics and Satterthwaite for DF estimation:
 #15. extract DF (# of case and ctrl subjects) for each study
-extractDF_study = function(study_id_ls)  {
+extractDF_study_func = function(study_id_ls)  {
   setNames(lapply(study_id_ls, function(id){
     if (id %in% c("CHN", "MH1", "MH3")) {
       metadata = read.csv(paste0(working_dir, "/", id, "_md_final.csv"))
@@ -784,7 +784,6 @@ tstatCal = function(study_id_res, study_id, extractDF_study_id) {
      lower.tail = F) #n_case + n_ctrl - 2
 }
 
-
 #17. back-calculate se from effect size and t-statistic
 se_recCal=function(study_id_res, tstatCal_out) {
   abs(study_id_res$effect.size) / tstatCal_out
@@ -792,9 +791,10 @@ se_recCal=function(study_id_res, tstatCal_out) {
 
 #18. get variance from se recovered:
 varianceCal = function(se_recCal_out) {
-  se_resCal_out^2
+  se_recCal_out^2
 }
 
+#19. functions to compute Satterthwaite DF:
 sum_varianceCal_Satt = function() #input: list of 
   
   
