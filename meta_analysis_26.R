@@ -688,7 +688,7 @@ preVpost_HeatmapMake = function(direction_es, merge_resPre, res_listPost) {
 # explicitly loads it into your environment:
 #13. function to retrieve metadata info for each T2D studies found in curatedMetagenomicData:
 #output a list of metadata control and metadata t2d:
-metadataRetrieve=function(study_id, metformin) #
+metadataRetrieve=function(study_id, confounder_para = c("metformin")) #
 {
 
   study_code=data.frame(
@@ -710,7 +710,7 @@ metadataRetrieve=function(study_id, metformin) #
   #----filter out those used antibiotics for control:
   #----filter out those used metformin:
   metadata = lapply(metadata, function(t) 
-    t |> filter(!grepl("metformin", treatment),
+    t |> filter(!grepl(confounder_para, treatment),
                 antibiotics_current_use != "yes"))
   
   return(metadata)

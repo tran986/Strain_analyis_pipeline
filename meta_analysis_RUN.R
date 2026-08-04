@@ -2,7 +2,7 @@
 working_dir = "/Users/tran.986/Desktop/meta_analysis_26"
 source(paste0(working_dir, "/meta_analysis_26.R"))
 
-#---pipeline 1: merge post-phylogenize
+#---pipeline 1: merge at gene-level (=)
 #---CHN only: (Qin et al, 2012) - a metagenome wide association study...
 #phylogenize_full_func(study_id = "CHN",
 #                      metadata_dir_path = paste0(working_dir,"/metadata/CHN_md_final.csv"),
@@ -210,103 +210,6 @@ study_id_ls = c("MCA", "SKK", "CHN", "ERP004605_MH1","ERP002469_MH3")
 #                phenotype = "provided",
 #                ref_env = "T2D metformin-")
 
-
-#------------------------------ANALYSIS OF FINAL BIOLOGICAL HITS:
-core_out=readRDS(paste0(working_dir, "/core_output.rds"))
-annotation_df=core_out$list_pheno$pz.db$gene.to.fxn
-gene_pres=core_out$list_pheno$pz.db$gene.presence
-tree=core_out$list_pheno$pz.db$trees
-
-#----------pipeline 1 (run each dataset separately) results import:
-#calculate for Faith's Diversity:
-#--CHN:
-CHN_all_res=readRes_n_pdCal(study_id = "CHN")
-CHN_anno=left_join(CHN_all_res, annnotation_df, by = "gene")
-
-
-#ERP004605_MH1:
-MH1_all_res=readRes_n_pdCal(study_id = "MH1")
-MH1_anno=left_join(MH1_all_res, annnotation_df, by = "gene")
-
-
-#ERP002469_MH3:
-MH3_all_res=readRes_n_pdCal(study_id = "MH3")
-MH3_anno=left_join(MH3_all_res, annnotation_df, by = "gene")
-
-
-#-------FOR TAXA LEVEL
-#Make an upset plot (intersecting taxa identity)
-#positive effect size:
-anno_list <- list(
-  CHN = CHN_anno,
-  MH1 = MH1_anno,
-  MH3 = MH3_anno
-  # add more datasets as you have them
-)
-
-upset_plotMake(taxa_list=anno_list,
-               direction_es = "negative")
-
-upset_plotMake(taxa_list=anno_list,
-               direction_es = "positive")
-
-#Make a heatmap (to pair with the upset plot)
-taxaLevel_plotMake(taxa_list=anno_list,
-                   direction_es = "positive",
-                   plot_type = "heatmap")
-
-taxaLevel_plotMake(taxa_list=anno_list,
-                   direction_es = "negative",
-                   plot_type = "heatmap")
-
-
-#-------FOR GENE LEVEL that consensus in each species
-#count_feature shows how many study_id that gene/taxa shows up:
-res_list=list("CHN"=CHN_all_res,
-     "MH1"=MH1_all_res,
-     "MH3"=MH3_all_res)
-
-consensus_geneFind(all_res_ls=res_list,
-                   direction_es = "positive") 
-
-consensus_geneFind(all_res_ls=res_list,
-                   direction_es = "negative")
-
-#----------pipeline 2:
-merge_res=read.csv(paste0(working_dir,"/all-results-merged-3ds.csv")) 
-
-#---TAXON-GENE LEVEL:
-Pre_mergePlot(mergeRes = merge_res)
-
-#----------pipeline1 AND pipeline 2:
-#function returns 2 heatmaps:
-#1 is Taxa-level:
-#how much of each study_id's all-result (post-Phylogenize merging) 
-#taxa overlaps with all-results of pre-Phylogenize merging:
-
-#2 is GENE LEVEL:
-#Identify taxa AND genes that overlaps bw
-# post-Phylogenize 
-# and pre-Phylogenize merging-> compare their ES:
-
-preVpost_HeatmapMake(direction_es="positive",
-                     merge_resPre = merge_res,
-                     res_listPost = res_list)
-
-
-preVpost_HeatmapMake(direction_es = "negative",
-                     merge_resPre = merge_res,
-                     res_listPost = res_list)
-
-
-#-----------------------================================-----------Expand to more datasets:
-#             HMP_2019_t2d --> HMP (not started)
-#         KarlssonFH_2013 --> MH3 (done)
-#                LiJ_2014 --> MH1 (done)
-#      MetaCardis_2020_a --> MCA (started - in progress) 
-#              QinJ_2012 --> CHN (done)
-# SankaranarayananK_2015 --> SKK (not started)
-
 #---MetaCardis -- Molinaro et al: Imidazole propionate is increased in diabetes and associated with dietary patterns and altered microbial ecology
 metadata_MCA_ctrl = metadataRetrieve(study_id = "MCA")[["healthy"]]
 metadata_MCA_t2d = metadataRetrieve(study_id = "MCA")[["T2D"]]
@@ -345,12 +248,147 @@ SKK_seqid = rbind(ctrl_SKK_seqid$fastq_df,
 SKK_md_final=rbind(ctrl_SKK_seqid$sample_list["sample_id"] |> dplyr::mutate(env="ND CTRL"),
                    t2d_SKK_seqid$sample_list["sample_id"] |> dplyr::mutate(env = "T2D metformin-")) 
 write.csv(SKK_md_final, paste0(working_dir, "/metadata/SKK_md_final.csv"))                   
-phylogenize_full_func(study_id = "SKK",
-                      metadata_dir_path = paste0(working_dir, "/metadata/SKK_md_final.csv"),
-                      ref_env = "T2D metformin-",
-                      envs_compared = c("ND CTRL", "T2D metformin-"))
+#phylogenize_full_func(study_id = "SKK",
+#                      metadata_dir_path = paste0(working_dir, "/metadata/SKK_md_final.csv"),
+#                      ref_env = "T2D metformin-",
+#                      envs_compared = c("ND CTRL", "T2D metformin-"))
 
+#------------------------------ANALYSIS OF FINAL BIOLOGICAL HITS:
+core_out=readRDS(paste0(working_dir, "/core_output.rds"))
+annotation_df=core_out$list_pheno$pz.db$gene.to.fxn
+gene_pres=core_out$list_pheno$pz.db$gene.presence
+tree=core_out$list_pheno$pz.db$trees
+
+#----------pipeline 1 (run each dataset separately) results import:
+#calculate for Faith's Diversity:
+#--CHN:
+CHN_all_res=readRes_n_pdCal(study_id = "CHN")
+CHN_anno=left_join(CHN_all_res, annnotation_df, by = "gene")
+
+
+#ERP004605_MH1:
+MH1_all_res=readRes_n_pdCal(study_id = "MH1")
+#MH1_anno=left_join(MH1_all_res, annnotation_df, by = "gene")
+
+
+#ERP002469_MH3:
+MH3_all_res=readRes_n_pdCal(study_id = "MH3")
+#MH3_anno=left_join(MH3_all_res, annnotation_df, by = "gene")
+
+#MCA:
+MCA_all_res = readRes_n_pdCal(study_id = "MCA")
+
+#SKK:
+SKK_all_res = readRes_n_pdCal(study_id = "SKK")
+
+
+#Pipeline 1A:
+#step 1: Recover SE from estimate and p-values - do it per gene/per taxa for each study:
+study_id_ls = c("CHN", "mhn1", "mhn3", "MCA", "SKK") #list of md_final csv, add MCK and SKK if needed
+
+#extract DF (# of case and ctrl subjects) for each study
+extractDF_study = setNames(lapply(study_id_ls, function(id){
+  if (id %in% c("CHN", "mhn1", "mhn3")) {
+    metadata = read.csv(paste0(working_dir, "/", id, "_md_final.csv"))
+    df_study = length(unique(metadata$Sample))
+  } else { #for SKK and CHN: read into outputs from metadataRetrieve() outputs:
+    metadata = bind_rows(metadataRetrieve(study_id = id))
+    df_study = length(unique(metadata$sample_id))
+  }
+}), study_id_ls)
+
+#convert p-value to t-statistics from each study df and p-value:
+#input: CHN_all_res, MH1_all_res, MH3_all_res, SKK_all_res, MCA_all_res
+
+tstatCal = function(study_id_res, study_id_ls) {
+  tstat=qt(1 - study_id_res$p.value/2, 
+           df = extractDF_study$study_id_res - 2) #n_case + n_ctrl - 2
+
+}
+
+#back-calculate se from effect size and t-statistic
+se_rec=abs(CHN_all_res$effect.size) / tstat
+
+#get s
+
+#step 2: 
+
+
+
+
+#-----------------------================================-----------Expand to more datasets:
+#             HMP_2019_t2d --> HMP (not started)
+#         KarlssonFH_2013 --> MH3 (done)
+#                LiJ_2014 --> MH1 (done)
+#      MetaCardis_2020_a --> MCA (started - in progress) 
+#              QinJ_2012 --> CHN (done)
+# SankaranarayananK_2015 --> SKK (not started)
 
  
+#======================================================================DRAFT=======================
+
+#-------FOR TAXA LEVEL
+#Make an upset plot (intersecting taxa identity)
+#positive effect size:
+anno_list <- list(
+  CHN = CHN_anno,
+  MH1 = MH1_anno,
+  MH3 = MH3_anno
+  # add more datasets as you have them
+)
+
+upset_plotMake(taxa_list=anno_list,
+               direction_es = "negative")
+
+upset_plotMake(taxa_list=anno_list,
+               direction_es = "positive")
+
+#Make a heatmap (to pair with the upset plot)
+taxaLevel_plotMake(taxa_list=anno_list,
+                   direction_es = "positive",
+                   plot_type = "heatmap")
+
+taxaLevel_plotMake(taxa_list=anno_list,
+                   direction_es = "negative",
+                   plot_type = "heatmap")
+
+
+#-------FOR GENE LEVEL that consensus in each species
+#count_feature shows how many study_id that gene/taxa shows up:
+res_list=list("CHN"=CHN_all_res,
+              "MH1"=MH1_all_res,
+              "MH3"=MH3_all_res)
+
+consensus_geneFind(all_res_ls=res_list,
+                   direction_es = "positive") 
+
+consensus_geneFind(all_res_ls=res_list,
+                   direction_es = "negative")
+
+#----------pipeline 2:
+merge_res=read.csv(paste0(working_dir,"/all-results-merged-3ds.csv")) 
+
+#---TAXON-GENE LEVEL:
+Pre_mergePlot(mergeRes = merge_res)
+
+#----------pipeline1 AND pipeline 2:
+#function returns 2 heatmaps:
+#1 is Taxa-level:
+#how much of each study_id's all-result (post-Phylogenize merging) 
+#taxa overlaps with all-results of pre-Phylogenize merging:
+
+#2 is GENE LEVEL:
+#Identify taxa AND genes that overlaps bw
+# post-Phylogenize 
+# and pre-Phylogenize merging-> compare their ES:
+
+preVpost_HeatmapMake(direction_es="positive",
+                     merge_resPre = merge_res,
+                     res_listPost = res_list)
+
+
+preVpost_HeatmapMake(direction_es = "negative",
+                     merge_resPre = merge_res,
+                     res_listPost = res_list)
 
 
