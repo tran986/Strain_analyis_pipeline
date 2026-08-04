@@ -2,6 +2,15 @@
 working_dir = "/Users/tran.986/Desktop/meta_analysis_26"
 source(paste0(working_dir, "/meta_analysis_26.R"))
 
+#-----------------------================================-----------Expand to more datasets:
+#             HMP_2019_t2d --> HMP (not started)
+#         KarlssonFH_2013 --> MH3 (done)
+#                LiJ_2014 --> MH1 (done)
+#      MetaCardis_2020_a --> MCA (started - in progress) 
+#              QinJ_2012 --> CHN (done)
+# SankaranarayananK_2015 --> SKK (not started)
+
+
 #---pipeline 1: merge at gene-level (=)
 #---CHN only: (Qin et al, 2012) - a metagenome wide association study...
 #phylogenize_full_func(study_id = "CHN",
@@ -282,47 +291,39 @@ MCA_all_res = readRes_n_pdCal(study_id = "MCA")
 SKK_all_res = readRes_n_pdCal(study_id = "SKK")
 
 
-#Pipeline 1A:
-#step 1: Recover SE from estimate and p-values - do it per gene/per taxa for each study:
-study_id_ls = c("CHN", "mhn1", "mhn3", "MCA", "SKK") #list of md_final csv, add MCK and SKK if needed
+#======================================= Pipeline 1A:
+#-------step 1: Recover SE from estimate and p-values - do it per gene/per taxa for each study:
+study_id_ls = c("CHN", "MH1", "MH3", "MCA", "SKK") #list of md_final csv, add MCK and SKK if needed
 
 #extract DF (# of case and ctrl subjects) for each study
-extractDF_study = setNames(lapply(study_id_ls, function(id){
-  if (id %in% c("CHN", "mhn1", "mhn3")) {
-    metadata = read.csv(paste0(working_dir, "/", id, "_md_final.csv"))
-    df_study = length(unique(metadata$Sample))
-  } else { #for SKK and CHN: read into outputs from metadataRetrieve() outputs:
-    metadata = bind_rows(metadataRetrieve(study_id = id))
-    df_study = length(unique(metadata$sample_id))
-  }
-}), study_id_ls)
+extractDF_study_out=extractDF_study(study_id_ls = study_id_ls)
 
 #convert p-value to t-statistics from each study df and p-value:
-#input: CHN_all_res, MH1_all_res, MH3_all_res, SKK_all_res, MCA_all_res
+#input: CHN_all_res, MH1_all_res, MH3_all_res, SKK_all_res, MCA_all_res + their id: "MCA", "SKK", "MH1", "MH3", etc
+all_res_list = list(CHN = CHN_all_res,
+     MH1 = MH1_all_res,
+     MH3 = MH3_all_res,
+     MCA = MCA_all_res,
+     SKK = SKK_all_res)
 
-tstatCal = function(study_id_res, study_id_ls) {
-  tstat=qt(1 - study_id_res$p.value/2, 
-           df = extractDF_study$study_id_res - 2) #n_case + n_ctrl - 2
-
-}
+all_tstat=setNames(lapply(seq_along(all_res_list), function(id) {
+       tstatCal(study_id_res = all_res_list[[id]],
+                study_id = names(id),
+                extractDF_study_id = extractDF_study_out[[id]])
+     }), names(all_res_list))
 
 #back-calculate se from effect size and t-statistic
-se_rec=abs(CHN_all_res$effect.size) / tstat
 
-#get s
+  
+#get variance from se recovered:
 
-#step 2: 
-
-
+#------- step 2: Plug variance, and study DF into Satterthwaite formula:
 
 
-#-----------------------================================-----------Expand to more datasets:
-#             HMP_2019_t2d --> HMP (not started)
-#         KarlssonFH_2013 --> MH3 (done)
-#                LiJ_2014 --> MH1 (done)
-#      MetaCardis_2020_a --> MCA (started - in progress) 
-#              QinJ_2012 --> CHN (done)
-# SankaranarayananK_2015 --> SKK (not started)
+
+
+
+
 
  
 #======================================================================DRAFT=======================

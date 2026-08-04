@@ -758,3 +758,48 @@ ftpRetrieve <- function(metadataRetrieve_out) {
               fastq_df = fastq_df))
 }
 
+#--------------PIPELINE 1A: using t-statistics and Satterthwaite for DF estimation:
+#15. extract DF (# of case and ctrl subjects) for each study
+extractDF_study = function(study_id_ls)  {
+  setNames(lapply(study_id_ls, function(id){
+    if (id %in% c("CHN", "MH1", "MH3")) {
+      metadata = read.csv(paste0(working_dir, "/", id, "_md_final.csv"))
+      df_study = length(unique(metadata$Sample))
+    } else { #for SKK and CHN: read into outputs from metadataRetrieve() outputs:
+      metadata = bind_rows(metadataRetrieve(study_id = id))
+      df_study = length(unique(metadata$sample_id))
+    }
+  }), study_id_ls)
+}
+
+#16. convert p-value to t-statistics from each study df and p-value:
+#input: CHN_all_res, MH1_all_res, MH3_all_res, SKK_all_res, MCA_all_res + their id: "MCA", "SKK", "MH1", "MH3", etc
+tstatCal = function(study_id_res, study_id, extractDF_study_id) {
+  #study_id_res = CHN_all_res
+  #study_id = "CHN"
+  #extractDF_study_out= extractDF_study_out[[study_id]]
+  p_capped = pmin(pmax(study_id_res$p.value, 1e-300), 1 - 1e-16) #cap p-values to avoid Inf/0 in t-statistic and SE
+  qt(p_capped/2, 
+     df = extractDF_study_id - 2,
+     lower.tail = F) #n_case + n_ctrl - 2
+}
+
+
+#17. back-calculate se from effect size and t-statistic
+se_recCal=function(study_id_res, tstatCal_out) {
+  abs(study_id_res$effect.size) / tstatCal_out
+}
+
+#18. get variance from se recovered:
+varianceCal = function(se_recCal_out) {
+  se_resCal_out^2
+}
+
+sum_varianceCal_Satt = function() #input: list of 
+  
+  
+  DF_Satt=function(sum_varianceCal_Satt_out,
+                   sum_variance_per_DF_out) {
+    sum_variance^2 / sum_variance_per_DF
+  }
+
