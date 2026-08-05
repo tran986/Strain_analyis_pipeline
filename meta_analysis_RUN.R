@@ -347,72 +347,41 @@ pooled_res = satt_df |> mutate(t_pooled = effsize_pooled / se_pooled,
 pooled_res$q_value_satt <-  p.adjust(pooled_res$p_value_satt, method = "BH")
 pooled_res |> View()
 
+#------Make a figure for those genes in those taxa that are from >1 studies:
+genes_to_plot = c("GUT_GENOME029728_01359","GUT_GENOME076986_01167", "UniRef50_A0A060CPZ1", "UniRef50_A0A417LEQ2", "UniRef50_UPI00102F5044")
+overlap_genes_study = combined_variance |> filter(gene %in% genes_to_plot) |>
+  mutate(se_val = sqrt(variance),
+         ci_lower = effect.size - 1.96 * se_val, #ci have to be computed from original effect.size for each gene/study
+         ci_upper = effect.size + 1.96 * se_val)
+
+overlap_genes_pooled = pooled_res |>
+  filter(gene %in% genes_to_plot) |>
+  mutate(
+    study_name = "Pooled",
+    se_val = se_pooled,
+    ci_lower = effsize_pooled - 1.96 * se_pooled,
+    ci_upper = effsize_pooled + 1.96 * se_pooled,
+    effect.size = effsize_pooled
+  ) %>%
+  select(study_name, taxon, gene, effect.size, se_val, ci_lower, ci_upper)
+
+forest_data_full =  bind_rows(overlap_genes_study[, c("study_name", "taxon", "gene", "effect.size", "se_val", "ci_lower", "ci_upper")],
+                              overlap_genes_pooled) 
+forest_data_full$study_name<-factor(forest_data_full$study_name, levels = c("Pooled", "CHN", "MH1", "MH3", "MCA", "SKK"))
+
+ggplot(forest_data_full, aes(x = effect.size, y = study_name, color = study_name == "Pooled")) +
+  geom_point(size = 3) +
+  geom_errorbarh(aes(xmin = ci_lower, xmax = ci_upper), height = 0.2) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey40") +
+  facet_wrap(~ gene, scales = "free_x") +
+  scale_color_manual(values = c("TRUE" = "firebrick", "FALSE" = "steelblue"), guide = "none") +
+  labs(
+    x = "Effect size (95% CI)",
+    y = NULL,
+    title = "Effect size comparison across studies - Pipeline 1(A)"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(strip.text = element_text(face = "bold"))
 
  
 #======================================================================DRAFT=======================
-
-#-------FOR TAXA LEVEL
-#Make an upset plot (intersecting taxa identity)
-#positive effect size:
-anno_list <- list(
-  CHN = CHN_anno,
-  MH1 = MH1_anno,
-  MH3 = MH3_anno
-  # add more datasets as you have them
-)
-
-upset_plotMake(taxa_list=anno_list,
-               direction_es = "negative")
-
-upset_plotMake(taxa_list=anno_list,
-               direction_es = "positive")
-
-#Make a heatmap (to pair with the upset plot)
-taxaLevel_plotMake(taxa_list=anno_list,
-                   direction_es = "positive",
-                   plot_type = "heatmap")
-
-taxaLevel_plotMake(taxa_list=anno_list,
-                   direction_es = "negative",
-                   plot_type = "heatmap")
-
-
-#-------FOR GENE LEVEL that consensus in each species
-#count_feature shows how many study_id that gene/taxa shows up:
-res_list=list("CHN"=CHN_all_res,
-              "MH1"=MH1_all_res,
-              "MH3"=MH3_all_res)
-
-consensus_geneFind(all_res_ls=res_list,
-                   direction_es = "positive") 
-
-consensus_geneFind(all_res_ls=res_list,
-                   direction_es = "negative")
-
-#----------pipeline 2:
-merge_res=read.csv(paste0(working_dir,"/all-results-merged-3ds.csv")) 
-
-#---TAXON-GENE LEVEL:
-Pre_mergePlot(mergeRes = merge_res)
-
-#----------pipeline1 AND pipeline 2:
-#function returns 2 heatmaps:
-#1 is Taxa-level:
-#how much of each study_id's all-result (post-Phylogenize merging) 
-#taxa overlaps with all-results of pre-Phylogenize merging:
-
-#2 is GENE LEVEL:
-#Identify taxa AND genes that overlaps bw
-# post-Phylogenize 
-# and pre-Phylogenize merging-> compare their ES:
-
-preVpost_HeatmapMake(direction_es="positive",
-                     merge_resPre = merge_res,
-                     res_listPost = res_list)
-
-
-preVpost_HeatmapMake(direction_es = "negative",
-                     merge_resPre = merge_res,
-                     res_listPost = res_list)
-
-
