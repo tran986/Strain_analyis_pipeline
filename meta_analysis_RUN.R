@@ -369,19 +369,20 @@ forest_data_full =  bind_rows(overlap_genes_study[, c("study_name", "taxon", "ge
                               overlap_genes_pooled) 
 forest_data_full$study_name<-factor(forest_data_full$study_name, levels = c("Pooled", "CHN", "MH1", "MH3", "MCA", "SKK"))
 
-ggplot(forest_data_full, aes(x = effect.size, y = study_name, color = study_name == "Pooled")) +
+test_pipeline1A=ggplot(forest_data_full, aes(x = effect.size, y = study_name, color = study_name == "Pooled")) +
   geom_point(size = 3) +
   geom_errorbarh(aes(xmin = ci_lower, xmax = ci_upper), height = 0.2) +
   geom_vline(xintercept = 0, linetype = "dashed", color = "grey40") +
-  facet_wrap(~ gene, scales = "free_x") +
+  facet_wrap(~ gene + taxon, scales = "free_x", ncol = 1) +   # <-- ncol = 1 forces single column
   scale_color_manual(values = c("TRUE" = "firebrick", "FALSE" = "steelblue"), guide = "none") +
-  labs(
-    x = "Effect size (95% CI)",
-    y = NULL,
-    title = "Effect size comparison across studies - Pipeline 1(A)"
-  ) +
+  labs(x = "Effect size (95% CI)", y = NULL, title = "Effect size comparison across studies") +
   theme_minimal(base_size = 12) +
   theme(strip.text = element_text(face = "bold"))
 
- 
+ggsave(plot = test_pipeline1A,
+       filename= "~/Desktop/test_1A.png",
+       width = 5,
+       height = 14,
+       units = "in",
+       dpi = 600)
 #======================================================================DRAFT=======================
