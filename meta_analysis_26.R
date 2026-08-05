@@ -795,11 +795,17 @@ varianceCal = function(se_recCal_out) {
 }
 
 #19. functions to compute Satterthwaite DF:
-sum_varianceCal_Satt = function() #input: list of 
+Satt_DFCal = function(varianceCal_out_combined) #input: list of all_res_with
+{ varianceCal_out_combined |> group_by(taxon, gene) |>
+  summarize(sum_var = sum(variance, na.rm = T),
+            sum_v2_df = sum(variance^2/study_DF, na.rm = T),
+            Satt_DF = sum_var / sum_v2_df,
+            weight_sum = sum(1 / variance, na.rm = TRUE),
+            effsize_pooled = sum(effect.size / variance, na.rm = TRUE) / weight_sum,
+            se_pooled = sqrt(1 / weight_sum),
+            n_studies  = n(),
+            .groups = "drop")
+}
   
-  
-  DF_Satt=function(sum_varianceCal_Satt_out,
-                   sum_variance_per_DF_out) {
-    sum_variance^2 / sum_variance_per_DF
-  }
+
 

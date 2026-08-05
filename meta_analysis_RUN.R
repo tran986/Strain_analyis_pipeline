@@ -322,16 +322,30 @@ all_variance = lapply(names(all_res_list), function(study_name) {
   all_res_list[[study_name]]$variance = varianceCal(
     se_recCal_out = all_res_list[[study_name]]$se
   )
+  
+  #add study_name to easy combine and group by later:
+  all_res_list[[study_name]]$study_name <- study_name
+  
+  #add DF for each study:
+  all_res_list[[study_name]]$study_DF <-extractDF_study_list[[study_name]]
+  
   all_res_list[[study_name]]
+  
 })
 names(all_variance) = names(all_res_list)
 
 #------- step 2: Plug variance, and study DF into Satterthwaite formula:
+#combined all_variance with all studies:
+combined_variance=bind_rows(all_variance)
+satt_df=Satt_DFCal(combined_variance) 
 
+#------- step 3: Compute pooled estimate and pooled SE -> t-statistics -> p-value
+pooled_res = satt_df |> mutate(t_pooled = effsize_pooled / se_pooled,
+         p_value_satt = 2 * pt(abs(t_pooled), df = Satt_DF, lower.tail = FALSE)) 
 
-
-
-
+#------- step 4: multiple hypothesis correction:
+pooled_res$q_value_satt <-  p.adjust(pooled_res$p_value_satt, method = "BH")
+pooled_res |> View()
 
 
  
