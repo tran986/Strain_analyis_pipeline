@@ -220,7 +220,7 @@ ancomExtract=function(ancomRun_output,
   mu_se_df
 }
 
-
+#fixed effect:
 weight_per_taxonCal=function(ancomRun_output_ls, study_id_ls){
   weight_per_taxon=lapply(ancomRun_output_ls, function(x) { #per study here:
     mu_se_df=ancomExtract(ancomRun_output = x,

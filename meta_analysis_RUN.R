@@ -225,6 +225,7 @@ metadata_MCA_t2d = metadataRetrieve(study_id = "MCA")[["T2D"]]
 ctrl_MCA_seqid=ftpRetrieve(metadata_MCA_ctrl)
 t2d_MCA_seqid=ftpRetrieve(metadata_MCA_t2d)
 
+
 #save fastq_df to run download.sh
 MCA_seqid = rbind(ctrl_MCA_seqid$fastq_df,
                   t2d_MCA_seqid$fastq_df)
@@ -290,8 +291,7 @@ MCA_all_res = readRes_n_pdCal(study_id = "MCA")
 #SKK:
 SKK_all_res = readRes_n_pdCal(study_id = "SKK")
 
-
-#======================================= Pipeline 1A:
+#======================================= Pipeline 1A
 #-------step 1: Recover SE from estimate and p-values - do it per gene/per taxa for each study:
 study_id_ls = c("CHN", "MH1", "MH3", "MCA", "SKK") #list of md_final csv, add MCK and SKK if needed
 
@@ -377,7 +377,10 @@ test_pipeline1A=ggplot(forest_data_full, aes(x = effect.size, y = study_name, co
   scale_color_manual(values = c("TRUE" = "firebrick", "FALSE" = "steelblue"), guide = "none") +
   labs(x = "Effect size (95% CI)", y = NULL, title = "Effect size comparison across studies") +
   theme_minimal(base_size = 12) +
-  theme(strip.text = element_text(face = "bold"))
+  theme(strip.text = element_text(face = "bold"),
+        plot.title = element_text(face = "bold",
+                                  size = 14, 
+                                  hjust = 0.5))
 
 ggsave(plot = test_pipeline1A,
        filename= "~/Desktop/test_1A.png",
@@ -385,4 +388,65 @@ ggsave(plot = test_pipeline1A,
        height = 14,
        units = "in",
        dpi = 600)
+
+#======================================= Pipeline 2 FIX USING RANDOM EFFECT INSTEAD - locally run
+study_ids = c("CHN", "ERP004605_MH1", "ERP002469_MH3", "MCA", "SKK")
+
+#read into list of ancombc results + ashr 
+ancombc_list = setNames(lapply(study_ids, function(id) {
+
+  res = readRDS(paste0(working_dir, "/ancom/", id, "_ancombc_res.rds"))
+  #run ancombc
+  extracted = ancomExtract(ancomRun_output = res)
+  #run ashr:
+  ash_fit = ash(betahat = extracted$mu, sebetahat = extracted$se)
+  
+  extracted$lfc_shrunk = ash_fit$result$PosteriorMean
+  extracted$se_shrunk  = ash_fit$result$PosteriorSD
+  
+  extracted$study<-id
+  extracted %>% select(taxon, lfc_shrunk, se_shrunk, study)
+  
+}), study_ids)
+
+combined_ancombc = bind_rows(ancombc_list)
+
+#Run random-effects meta-analysis per taxon
+taxon_meta_results = combined_ancombc %>%
+  group_by(taxon) %>%
+  group_modify(~ {
+    # need at least 2 studies to run meta-analysis
+    if (nrow(.x) < 2) {
+      return(tibble(
+        theta_pooled = NA, se_pooled = NA, tau2 = NA,
+        I2 = NA, p_value = NA, n_studies = nrow(.x)
+      ))
+    }
+    
+    fit = tryCatch(
+      rma(yi = .x$lfc_shrunk, sei = .x$se_shrunk, method = "REML"),
+      error = function(e) NULL
+    )
+    
+    if (is.null(fit)) {
+      return(tibble(
+        theta_pooled = NA, se_pooled = NA, tau2 = NA,
+        I2 = NA, p_value = NA, n_studies = nrow(.x)
+      ))
+    }
+    
+    tibble(
+      theta_pooled = as.numeric(fit$b), #random-effects pooled log fold-change for that taxon
+      se_pooled    = fit$se, #SE of the pooled estimate (already reflects both within-study and between-study variance)
+      tau2         = fit$tau2, #between-study variance
+      I2           = fit$I2, #% of total variability due to heterogeneity rather than sampling error
+      p_value      = fit$pval,
+      n_studies    = nrow(.x)
+    )
+  }) %>%
+  ungroup() 
+
+write.csv(taxon_meta_results, paste0(working_dir, "/random_effect_out.csv"))
+
+
 #======================================================================DRAFT=======================
