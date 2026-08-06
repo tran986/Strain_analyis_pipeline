@@ -446,7 +446,17 @@ taxon_meta_results = combined_ancombc %>%
   }) %>%
   ungroup() 
 
-write.csv(taxon_meta_results, paste0(working_dir, "/random_effect_out.csv"))
+#create a provided_file where n_studies >= 4
+provided_file = taxon_meta_results %>%
+  dplyr::filter(n_studies == 5) |>
+  dplyr::select(taxon, se_pooled, theta_pooled) |>
+  dplyr::rename("estimate"="theta_pooled",
+                "stderr"="se_pooled")
 
+write.table(provided_file, 
+	    paste0(working_dir, "/provided_file_REML_w_ash.tsv"),
+	    sep = "\t",
+	    row.names = F, 
+	    quote = F)
 
 #======================================================================DRAFT=======================
