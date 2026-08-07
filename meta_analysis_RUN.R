@@ -508,7 +508,19 @@ comparison_tbl = pooled_res[c("taxon", "gene", "effsize_pooled", "q_value_satt")
       !sig_p1 & sig_p2 ~ "Sig in Pipeline 2 only",
       TRUE ~ "Not significant in either"
     )
-  ) 
+  )
+colnames(comparison_tbl)
+#export this table for slide:
+comparison_tbl |> kbl(caption = "Overlapping genes AND taxa across 2 pipelines",
+                      col.names = c("Taxa", "Gene", "Effect Size p1", "q.value p1 (BH)",
+                                    "Effect Size p2", "q.value p2", "Sig p1", "Sig p2", "Concordance"),
+                      align = rep(c("c"), ncol(comparison_tbl))) |>
+  kable_styling(
+    bootstrap_options = c("bordered", "striped"),
+    full_width = FALSE
+  )|>
+  kableExtra::kable_classic() 
+
 
 #try out different type of comparing plots:
 ggplot(comparison_tbl, aes(x = theta_p1, y = theta_p2, color = concordance)) +
