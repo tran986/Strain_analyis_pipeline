@@ -451,12 +451,33 @@ provided_file = taxon_meta_results %>%
   dplyr::filter(n_studies == 5) |>
   dplyr::select(taxon, se_pooled, theta_pooled) |>
   dplyr::rename("estimate"="theta_pooled",
-                "stderr"="se_pooled")
+                "stderr"="se_pooled") %>% 
+  drop_na(stderr, estimate)
 
 write.table(provided_file, 
 	    paste0(working_dir, "/provided_file_REML_w_ash.tsv"),
 	    sep = "\t",
 	    row.names = F, 
 	    quote = F)
+
+#phylogenize is run on HPC:
+
+#read into phylogenize results of merged 5 studies, w ash, REML:
+all_res_reml5= readRes_n_pdCal(study_id = "ash-5studies-REML") |> #506 hits in total
+  mutate(neglog10q = -log10(q.value),
+         sig_status = case_when(q.value < 0.05 & effect.size > 0 ~ "Up, significant",
+                                q.value < 0.05 & effect.size < 0 ~ "Down, significant"),
+         plot_color = ifelse(neglog10q >= -log10(0.05), 
+                             as.character(taxon),
+                             "not significant"))
+
+ggplot(all_res_reml5, aes(x = effect.size, y = neglog10q, color = taxon)) +
+  geom_point(alpha = 0.65, size = 1.9) +
+  geom_vline(xintercept = 0, color = "black", linetype = "dashed", linewidth = 0.8) +
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed", color = "red") +
+  labs(x = "Effect size", y = expression(-log[10](q)), title = "Pipeline 2: gene associations by taxon across 5 studies") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "right")
+
 
 #======================================================================DRAFT=======================
