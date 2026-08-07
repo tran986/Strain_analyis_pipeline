@@ -11,6 +11,7 @@ library(devtools)
 library(ape)
 library(picante)
 library(UpSetR)
+library(ggVennDiagram)
 library(circlize)
 library(curatedMetagenomicData)
 #devtools::load_all("/fs/project/bradley.720/projects/phylogenize_v2/phylogenize_repermulize/package/repermulize")
@@ -148,8 +149,10 @@ phylogenize_run=function(provided_file_path = NULL,
     
   } else { #provided phenotype
     res = phylogenize(
-      output_file = paste0(working_dir, "/pipeline2/phylogenize/out/phylogenize.html"),
-      out_dir = paste0(working_dir, "/pipeline2/phylogenize/out"),
+      output_file = paste0(working_dir, "/phylogenize_pipeline2"),
+      #output_file = paste0(working_dir, "/pipeline2/phylogenize/out/phylogenize.html"), #for HPC
+      output_file = paste0(working_dir, "/phylogenize_pipeline2/phylogenize.html")
+      #out_dir = paste0(working_dir, "/pipeline2/phylogenize/out"),#for HPC
       data_dir = dataset_dir,
       db = "human-gut",
       taxon_level = "family",

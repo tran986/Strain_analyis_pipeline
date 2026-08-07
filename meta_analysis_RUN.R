@@ -343,9 +343,8 @@ satt_df=Satt_DFCal(combined_variance)
 pooled_res = satt_df |> mutate(t_pooled = effsize_pooled / se_pooled,
          p_value_satt = 2 * pt(abs(t_pooled), df = Satt_DF, lower.tail = FALSE)) 
 
-#------- step 4: multiple hypothesis correction:
+#------- step 4: multiple hypothesis correction: - use either BH or qvalue storey method (less conservative):
 pooled_res$q_value_satt <-  p.adjust(pooled_res$p_value_satt, method = "BH")
-pooled_res |> View()
 
 #------Make a figure for those genes in those taxa that are from >1 studies:
 genes_to_plot = c("GUT_GENOME029728_01359","GUT_GENOME076986_01167", "UniRef50_A0A060CPZ1", "UniRef50_A0A417LEQ2", "UniRef50_UPI00102F5044")
@@ -460,7 +459,7 @@ write.table(provided_file,
 	    row.names = F, 
 	    quote = F)
 
-#phylogenize is run on HPC:
+#phylogenize is run on HPC:...
 
 #read into phylogenize results of merged 5 studies, w ash, REML:
 all_res_reml5= readRes_n_pdCal(study_id = "ash-5studies-REML") |> #506 hits in total
@@ -471,13 +470,95 @@ all_res_reml5= readRes_n_pdCal(study_id = "ash-5studies-REML") |> #506 hits in t
                              as.character(taxon),
                              "not significant"))
 
-ggplot(all_res_reml5, aes(x = effect.size, y = neglog10q, color = taxon)) +
+pipeline2_plot=ggplot(all_res_reml5, aes(x = effect.size, y = neglog10q, color = taxon)) +
   geom_point(alpha = 0.65, size = 1.9) +
   geom_vline(xintercept = 0, color = "black", linetype = "dashed", linewidth = 0.8) +
   geom_hline(yintercept = -log10(0.05), linetype = "dashed", color = "red") +
-  labs(x = "Effect size", y = expression(-log[10](q)), title = "Pipeline 2: gene associations by taxon across 5 studies") +
+  labs(x = "Effect size", y = expression(-log[10](q)), title = "Pipeline 2: gene associations by taxon across 5 studies (n=506)") +
   theme_minimal(base_size = 12) +
   theme(legend.position = "right")
+
+ggsave(plot = pipeline2_plot,
+       filename = paste0(working_dir, "/test_pipeline2_plot.png"),
+       width = 9,
+       height = 5,
+       units = "in",
+       dpi = 600)
+
+#=============================pipeline 2:
+#pipeline 1 all-results merged at gene level: 
+colnames(pooled_res) #use taxon, gene, effsize_pooled, q_value_satt (already corrected - BH), 
+#pipeline 2 all-results merged at taxa level:
+colnames(all_res_reml5) #use taxon, gene, effect.size, q.value (corrected)
+
+comparison_tbl = pooled_res[c("taxon", "gene", "effsize_pooled", "q_value_satt")] |>
+  dplyr::rename("q_p1"="q_value_satt",
+                "theta_p1"="effsize_pooled") |>
+  inner_join(
+    all_res_reml5 |> select(taxon, gene, theta_p2 = effect.size, q_p2=q.value), 
+    by = c("gene", "taxon")
+  ) |>
+  mutate(
+    sig_p1 = q_p1 < 0.05,
+    sig_p2 = q_p2 < 0.05,
+    concordance = case_when(
+      sig_p1 & sig_p2 & sign(theta_p1) == sign(theta_p2) ~ "Concordant (both sig, same direction)",
+      sig_p1 & sig_p2 & sign(theta_p1) != sign(theta_p2) ~ "Discordant direction",
+      sig_p1 & !sig_p2 ~ "Sig in Pipeline 1 only",
+      !sig_p1 & sig_p2 ~ "Sig in Pipeline 2 only",
+      TRUE ~ "Not significant in either"
+    )
+  ) 
+
+#try out different type of comparing plots:
+ggplot(comparison_tbl, aes(x = theta_p1, y = theta_p2, color = concordance)) +
+  geom_point(alpha = 0.7, size = 1.8) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "grey40") +
+  geom_hline(yintercept = 0, color = "grey85") +
+  geom_vline(xintercept = 0, color = "grey85") +
+  scale_color_manual(values = c(
+    "Concordant (both sig, same direction)" = "firebrick",
+    "Discordant direction" = "purple",
+    "Sig in Pipeline 1 only" = "steelblue",
+    "Sig in Pipeline 2 only" = "darkorange",
+    "Not significant in either" = "grey80"
+  )) +
+  labs(
+    x = "Effect size — Pipeline 1",
+    y = "Effect size — Pipeline 2",
+    color = NULL,
+    title = "Effect size agreement between pipelines"
+  ) +
+  theme_minimal(base_size = 12)
+
+vdiagram <- ggVennDiagram(
+  list(
+    "Pipeline \n1 " = unique(pooled_res$gene),
+    "Pipeline \n2 " = unique(all_res_reml5$gene)
+  ),
+  label = "count",
+  category.position = "inside"
+) +
+  scale_x_continuous(expand = expansion(mult = 0.3)) +
+  theme(
+    plot.margin = margin(30, 30, 30, 30),
+    legend.position = "none"
+  ) +
+  labs(title = "Genes overlap between pipelines (regardless of taxa)") +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
+
+ggsave(plot = vdiagram,
+       filename = paste0(working_dir, "/p1_v_p2_vd.png"),
+       width = 10,
+       height = 4,
+       units = "in",
+       dpi = 600)
+
+
+
+
 
 
 #======================================================================DRAFT=======================
