@@ -1,0 +1,16 @@
+sample_id	URL
+SRR2912776	https://www.ebi.ac.uk/ena/portal/api/filereport?accession=SRR2912776&result=read_run&fields=fastq_ftp
+SRR2912809	https://www.ebi.ac.uk/ena/portal/api/filereport?accession=SRR2912809&result=read_run&fields=fastq_ftp
+SRR2912777	https://www.ebi.ac.uk/ena/portal/api/filereport?accession=SRR2912777&result=read_run&fields=fastq_ftp
+SRR2912778	https://www.ebi.ac.uk/ena/portal/api/filereport?accession=SRR2912778&result=read_run&fields=fastq_ftp
+SRR2912779	https://www.ebi.ac.uk/ena/portal/api/filereport?accession=SRR2912779&result=read_run&fields=fastq_ftp
+SRR2912783	https://www.ebi.ac.uk/ena/portal/api/filereport?accession=SRR2912783&result=read_run&fields=fastq_ftp
+SRR2912784	https://www.ebi.ac.uk/ena/portal/api/filereport?accession=SRR2912784&result=read_run&fields=fastq_ftp
+SRR2912785	https://www.ebi.ac.uk/ena/portal/api/filereport?accession=SRR2912785&result=read_run&fields=fastq_ftp
+SRR2912788	https://www.ebi.ac.uk/ena/portal/api/filereport?accession=SRR2912788&result=read_run&fields=fastq_ftp
+SRR2912790	https://www.ebi.ac.uk/ena/portal/api/filereport?accession=SRR2912790&result=read_run&fields=fastq_ftp
+SRR2912791	https://www.ebi.ac.uk/ena/portal/api/filereport?accession=SRR2912791&result=read_run&fields=fastq_ftp
+SRR2912793	https://www.ebi.ac.uk/ena/portal/api/filereport?accession=SRR2912793&result=read_run&fields=fastq_ftp
+SRR2912796	https://www.ebi.ac.uk/ena/portal/api/filereport?accession=SRR2912796&result=read_run&fields=fastq_ftp
+SRR2912800	https://www.ebi.ac.uk/ena/portal/api/filereport?accession=SRR2912800&result=read_run&fields=fastq_ftp
+SRR2912801	https://www.ebi.ac.uk/ena/portal/api/filereport?accession=SRR2912801&result=read_run&fields=fastq_ftp

@@ -5,6 +5,7 @@ library(readxl)
 library(httr2)
 library(readr)
 library(purrr)
+library(ashr)
 library(dplyr)
 library(tidyverse)
 library(devtools)
@@ -151,7 +152,7 @@ phylogenize_run=function(provided_file_path = NULL,
     res = phylogenize(
       output_file = paste0(working_dir, "/phylogenize_pipeline2"),
       #output_file = paste0(working_dir, "/pipeline2/phylogenize/out/phylogenize.html"), #for HPC
-      output_file = paste0(working_dir, "/phylogenize_pipeline2/phylogenize.html")
+      output_file = paste0(working_dir, "/phylogenize_pipeline2/phylogenize.html"),
       #out_dir = paste0(working_dir, "/pipeline2/phylogenize/out"),#for HPC
       data_dir = dataset_dir,
       db = "human-gut",
