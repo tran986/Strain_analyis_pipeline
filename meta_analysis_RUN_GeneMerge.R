@@ -205,3 +205,118 @@ pooled_res = satt_df |> mutate(t_pooled = effsize_pooled / se_pooled,
 #------- step 4: multiple hypothesis correction: - use either BH or qvalue storey method (less conservative):
 pooled_res$q_value_satt <-  p.adjust(pooled_res$p_value_satt, method = "BH")
 
+#==================================================== Inspection of why we have so little overlapping genes signals:
+#import the .rds from phylogenize2 for each dataset:
+merge_core = lapply(study_id_ls, function(i) 
+  readRDS(paste0(working_dir, "/core_output_", i,"_mergeGene.rds")))
+
+phenotype = lapply(merge_core, function(i) {
+  enframe(i$list_pheno$phenotype_results$phenotype, 
+          name = "taxon",
+          value = "phenotype values") |>
+    left_join(i$list_pheno$pz.db$taxonomy,
+              by = c("taxon"="cluster"))
+})
+  
+#step 1: Determine which genes each study "has access to"
+detected_taxa = setNames(lapply(phenotype, function(i) {
+  i$taxon
+}), study_id_ls)
+  
+#subset gene matrix of Corio and Lachno:
+gene_pres_Corio = gene_pres$Coriobacteriaceae
+gene_pres_Lachno = gene_pres$Lachnospiraceae
+
+gene_sets_per_study_Corio = setNames(lapply(study_id_ls, function(s) {
+  taxa_in_study = detected_taxa[[s]]
+  
+  # subset to only the columns (taxa) detected in this study
+  taxa_in_study_present = intersect(taxa_in_study, colnames(gene_pres_Corio))
+  sub_matrix = gene_pres_Corio[, taxa_in_study_present, drop = FALSE]
+  
+  # a gene is "available" in this study if ANY of its detected taxa carry it
+  gene_present = rownames(sub_matrix)[rowSums(sub_matrix > 0) > 0]
+  gene_present
+}), study_id_ls)
+
+gene_sets_per_study_Lachno = setNames(lapply(study_id_ls, function(s) {
+  taxa_in_study = detected_taxa[[s]]
+  
+  # subset to only the columns (taxa) detected in this study
+  taxa_in_study_present = intersect(taxa_in_study, colnames(gene_pres_Lachno))
+  sub_matrix = gene_pres_Lachno[, taxa_in_study_present, drop = FALSE]
+  
+  # a gene is "available" in this study if ANY of its detected taxa carry it
+  gene_present = rownames(sub_matrix)[rowSums(sub_matrix > 0) > 0]
+  gene_present
+}), study_id_ls)
+
+#step 2: Build the gene × study presence table (same as before)
+all_genes_Corio = rownames(gene_pres_Corio)  # use full gene list as reference, not just union
+all_genes_Lachno = rownames(gene_pres_Lachno)
+
+#Corio:
+gene_presence_Corio = data.frame(
+  gene = all_genes_Corio,
+  CHN = all_genes_Corio %in% gene_sets_per_study_Corio$CHN,
+  MH1 = all_genes_Corio %in% gene_sets_per_study_Corio$MH1,
+  MH3 = all_genes_Corio %in% gene_sets_per_study_Corio$MH3,
+  SKK = all_genes_Corio %in% gene_sets_per_study_Corio$SKK,
+  MCA = all_genes_Corio %in% gene_sets_per_study_Corio$MCA
+)
+
+#Lachno
+gene_presence_Lachno = data.frame(
+  gene = all_genes_Lachno,
+  CHN = all_genes_Lachno %in% gene_sets_per_study_Lachno$CHN,
+  MH1 = all_genes_Lachno %in% gene_sets_per_study_Lachno$MH1,
+  MH3 = all_genes_Lachno %in% gene_sets_per_study_Lachno$MH3,
+  SKK = all_genes_Lachno %in% gene_sets_per_study_Lachno$SKK,
+  MCA = all_genes_Lachno %in% gene_sets_per_study_Lachno$MCA
+)
+
+#step 3: Summarize
+#Corio
+genes_in_all_Corio = gene_presence_Corio %>% filter(CHN & MH1 & MH3 & SKK & MCA) %>% pull(gene) #genes that are present across all studies
+genes_dropped_somewhere_Corio = gene_presence_Corio %>% filter(!(CHN & MH1 & MH3 & SKK & MCA)) %>% pull(gene)
+
+gene_presence_Corio %>%
+  summarise(
+    n_all_5 = sum(CHN & MH1 & MH3 & SKK & MCA),
+    n_missing_at_least_one = sum(!(CHN & MH1 & MH3 & SKK & MCA)),
+    n_only_CHN = sum(CHN & !MH1 & !MH3 & !SKK & !MCA),
+    n_only_MH1 = sum(!CHN & MH1 & !MH3 & !SKK & !MCA),
+    n_only_MH3 = sum(!CHN & !MH1 & MH3 & !SKK & !MCA),
+    n_only_SKK = sum(!CHN & !MH1 & !MH3 & SKK & !MCA),
+    n_only_MCA = sum(!CHN & !MH1 & !MH3 & !SKK & MCA)
+  )
+
+upset_input_Corio = gene_presence_Corio %>%
+  mutate(across(c(CHN, MH1, MH3, SKK, MCA), as.integer)) %>%
+  select(CHN, MH1, MH3, SKK, MCA)
+
+upset(upset_input_Corio, sets = c("CHN", "MH1", "MH3", "SKK", "MCA"), order.by = "freq")
+
+#Lachno
+genes_in_all_Lachno = gene_presence_Lachno %>% filter(CHN & MH1 & MH3 & SKK & MCA) %>% pull(gene) #genes that are present across all studies
+genes_dropped_somewhere_Lachno = gene_presence_Lachno %>% filter(!(CHN & MH1 & MH3 & SKK & MCA)) %>% pull(gene)
+
+gene_presence_Lachno %>%
+  summarise(
+    n_all_5 = sum(CHN & MH1 & MH3 & SKK & MCA),
+    n_missing_at_least_one = sum(!(CHN & MH1 & MH3 & SKK & MCA)),
+    n_only_CHN = sum(CHN & !MH1 & !MH3 & !SKK & !MCA),
+    n_only_MH1 = sum(!CHN & MH1 & !MH3 & !SKK & !MCA),
+    n_only_MH3 = sum(!CHN & !MH1 & MH3 & !SKK & !MCA),
+    n_only_SKK = sum(!CHN & !MH1 & !MH3 & SKK & !MCA),
+    n_only_MCA = sum(!CHN & !MH1 & !MH3 & !SKK & MCA)
+  )
+
+upset_input_Lachno = gene_presence_Lachno %>%
+  mutate(across(c(CHN, MH1, MH3, SKK, MCA), as.integer)) %>%
+  select(CHN, MH1, MH3, SKK, MCA)
+
+upset(upset_input_Lachno, sets = c("CHN", "MH1", "MH3", "SKK", "MCA"), order.by = "freq")
+
+
+
