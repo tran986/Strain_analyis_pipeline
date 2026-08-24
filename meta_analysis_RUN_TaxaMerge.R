@@ -84,9 +84,34 @@ phylogenize_run(provided_file_path = paste0(working_dir, "/mergeTaxa/ash/ashMerg
                 phenotype = "provided",
                 ref_env = "ND CTRL")
 
+#---read into phylogenize result:
+RandMerge_phyloz_out = read.csv(paste0(working_dir, "/all-results-randTaxaMerge.csv"))
 
+RandMerge_results = RandMerge_phyloz_out %>%
+  mutate(
+    neglog10q = -log10(q.value),
+    sig_status = case_when(
+      q.value < 0.05 & effect.size > 0 ~ "Up, significant",
+      q.value < 0.05 & effect.size < 0 ~ "Down, significant",
+      TRUE ~ "Not significant"),
+    plot_color = if_else(neglog10q >= -log10(0.05), as.character(taxon), "Not significant")
+  )
 
+taxon_levels = sort(unique(RandMerge_results$plot_color[RandMerge_results$plot_color != "Not significant"]))
+taxon_colors = setNames(hue_pal()(length(taxon_levels)), taxon_levels)
+color_values = c(taxon_colors, "Not significant" = "grey80")
 
+RandMerge_results$plot_color = factor(
+  RandMerge_results$plot_color,
+  levels = c("Not significant", taxon_levels)
+)
 
+ggplot(RandMerge_results %>% arrange(plot_color), aes(x = effect.size, y = neglog10q, color = plot_color)) +
+  geom_point(alpha = 0.7, size = 1.8) +
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed", color = "grey40") +
+  scale_color_manual(values = color_values, name = "Taxon") +
+  labs(x = "Effect size", y = expression(-log[10](q)), title = "Merge at GENE: 377 genes significant ") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "right")
 
 
