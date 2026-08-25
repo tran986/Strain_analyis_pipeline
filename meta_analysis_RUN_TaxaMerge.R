@@ -114,4 +114,8 @@ ggplot(RandMerge_results %>% arrange(plot_color), aes(x = effect.size, y = neglo
   theme_minimal(base_size = 12) +
   theme(legend.position = "right")
 
+#testing/Drafting
+RandMerge_results[RandMerge_results$sig_status == "Up, significant",] |> arrange(-effect.size) |> left_join(annotation_df, 
+                                                                                                            by = "gene") |> View()
+
 
