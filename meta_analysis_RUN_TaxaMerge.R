@@ -140,35 +140,17 @@ metadata_tbl_merge$env <- factor(metadata_tbl_merge$env,
                                  levels=c("ND CTRL", "T2D metformin-"))
 
 #fit into Aldex3 allowing uncertainty around the CLR-implied scale differences:
-aldex_fit <- aldex(count_tbl_merge_aldex,
-                   ~env,
-                   metadata_tbl_merge,
-                   nsample=1554,
-                   scale=clr.sm,  # CLR assumption
-                   gamma=1) 
+#aldex_fit <- aldex(count_tbl_merge_aldex,
+#                   ~env,
+#                   metadata_tbl_merge,
+#                   nsample=1554,
+#                   scale=clr.sm,  # CLR assumption
+#                   gamma=1) 
 
+saveRDS(aldex_fit, paste0(working_dir, "/aldex3_merge_fit.rds"))
+#use this aldex3 fit for ashr -> phylogenize2 
+summary(aldex_fit)
 
 #=======================================draft:
-#count
-data(gut_crohns_data)
-Y <- gut_crohns_data$counts
-keep_names <- row.names(Y[((rowSums(Y==0))/ncol(Y))<=0.75,])
-other <- colSums(Y[((rowSums(Y==0))/ncol(Y))>0.75,])
-Y <- Y[keep_names,]
-Y <- rbind(Y, other)
-
-#metadata:
-X <- gut_crohns_data$metadata
-X$Health.status <- factor(X$Health.status,
-                          levels=c("Control", "CD"))
-
-ncol(Y)
-# Allow uncertainty around the CLR-implied scale differences
-aldex.gut.raw <- aldex(Y,
-                       ~Health.status,
-                       X,
-                       nsample=2000,
-                       scale=clr.sm,  # CLR assumption
-                       gamma=1)  
 
 aldex.gut.summary <- summary(aldex.gut.raw)
