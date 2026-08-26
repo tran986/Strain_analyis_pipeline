@@ -118,4 +118,57 @@ ggplot(RandMerge_results %>% arrange(plot_color), aes(x = effect.size, y = neglo
 RandMerge_results[RandMerge_results$sig_status == "Up, significant",] |> arrange(-effect.size) |> left_join(annotation_df, 
                                                                                                             by = "gene") |> View()
 
+#================================Validating Corio and Lachno hits by different means:
+#-----------------------option 1:Applies Aldex3 on the same data:
+library(ALDEx3)
+#import X (count tbl) and Y (metadata):
+count_tbl_merge = read.delim(paste0(working_dir, "/count_tbl_merged.tab")) 
+metadata_tbl_merge = read.delim(paste0(working_dir, "/metadata_merged.tab")) |> column_to_rownames(var = "sample")
 
+#filter count tbl at 75%
+count_tbl_merge = count_tbl_merge %>%
+  dplyr::select(name, rownames(metadata_tbl_merge)) %>%  #where count_tbl = merged count_tbl
+  column_to_rownames(var = "name")
+
+keep_names=row.names(count_tbl_merge[((rowSums(count_tbl_merge==0))/ncol(count_tbl_merge))<=0.75,])
+other_names=colSums(count_tbl_merge[((rowSums(count_tbl_merge==0))/ncol(count_tbl_merge))>0.75,])
+count_tbl_merge <- count_tbl_merge[keep_names,]
+count_tbl_merge_aldex <- rbind(count_tbl_merge, other_names) 
+
+#clean up metadata:
+metadata_tbl_merge$env <- factor(metadata_tbl_merge$env,
+                                 levels=c("ND CTRL", "T2D metformin-"))
+
+#fit into Aldex3 allowing uncertainty around the CLR-implied scale differences:
+aldex_fit <- aldex(count_tbl_merge_aldex,
+                   ~env,
+                   metadata_tbl_merge,
+                   nsample=1554,
+                   scale=clr.sm,  # CLR assumption
+                   gamma=1) 
+
+
+#=======================================draft:
+#count
+data(gut_crohns_data)
+Y <- gut_crohns_data$counts
+keep_names <- row.names(Y[((rowSums(Y==0))/ncol(Y))<=0.75,])
+other <- colSums(Y[((rowSums(Y==0))/ncol(Y))>0.75,])
+Y <- Y[keep_names,]
+Y <- rbind(Y, other)
+
+#metadata:
+X <- gut_crohns_data$metadata
+X$Health.status <- factor(X$Health.status,
+                          levels=c("Control", "CD"))
+
+ncol(Y)
+# Allow uncertainty around the CLR-implied scale differences
+aldex.gut.raw <- aldex(Y,
+                       ~Health.status,
+                       X,
+                       nsample=2000,
+                       scale=clr.sm,  # CLR assumption
+                       gamma=1)  
+
+aldex.gut.summary <- summary(aldex.gut.raw)
