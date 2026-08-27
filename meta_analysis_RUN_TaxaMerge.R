@@ -151,6 +151,59 @@ saveRDS(aldex_fit, paste0(working_dir, "/aldex3_merge_fit.rds"))
 #use this aldex3 fit for ashr -> phylogenize2 
 summary(aldex_fit)
 
-#=======================================draft:
+#-----------------------option 2:Making sure what we see is due to technical (length) of the seq:
+study_id_ls = c("CHN", "ERP002469_MH3", "ERP004605_MH1", "MCA", "SKK")
+import_bracken_truncate_ls = setNames(lapply(study_id_ls, function(x) 
+  {import_bracken_truncate(study_id = x)}), study_id_ls)
 
-aldex.gut.summary <- summary(aldex.gut.raw)
+taxa_counts <- imap_dfr(
+  import_bracken_truncate_ls,
+  function(study_data, study_name) {
+    
+    map_dfr(
+      names(study_data),
+      function(len) {
+        
+        df <- study_data[[len]]
+        
+        tibble(
+          study = study_name,
+          length = as.numeric(len),
+          sample = names(df)[-1],
+          n_taxa = colSums(df[-1] > 0)
+        )
+      }
+    )
+  }
+)
+
+cor.test(
+  taxa_counts$length,
+  taxa_counts$n_taxa,
+  method = "spearman"
+)
+
+summary(model)
+
+#make a plot:
+library(ggpubr)
+ggplot(
+  taxa_counts,
+  aes(x = length, y = n_taxa, group = sample)
+) +
+  geom_line(alpha = 0.2) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(
+    aes(group = study),
+    method = "lm",
+    se = TRUE
+  ) +
+  facet_wrap(~ study) +
+  labs(
+    x = "Sequence length (bp)",
+    y = "Number of detected taxa"
+  ) +
+  theme_classic()
+
+
+
