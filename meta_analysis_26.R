@@ -69,7 +69,7 @@ phylogenize_full_func=function(study_id, metadata_dir_path, envs_compared, ref_e
 }
 
 
-#2. function to read into .bracken files (push this to ASC):
+#2a. function to read into .bracken files (push this to ASC):
 import_bracken=function(study_id) { 
   file = list.files(path=paste0(working_dir, "/abund/", study_id))
   data = map(file, ~ { read_tsv(file.path(paste0(working_dir, "/abund/", study_id), .), show_col_types=FALSE) })
@@ -83,6 +83,63 @@ import_bracken=function(study_id) {
                                     values_fill = 0)
   write.table(data_w_count, file = paste0(working_dir, "/phylogenize_out/", study_id, "/data_w_count.tsv"), sep = "\t", row.names = FALSE, quote = FALSE)
   return(data_w_count)
+}
+
+#2b. function to read into bracken files (but for truncate cases only) - put each of length in a group:
+import_bracken_truncate = function(study_id) {
+  file = list.files(path=paste0(working_dir, "/truncate_abund/", study_id))
+  sq_len_ls = c("50", "75", "100", "125", "150")
+  
+  #file =
+  group_sq_ls = lapply(sq_len_ls, function(sq_len) { #equivalent to file
+    Filter(length, lapply(file, function(i) {
+      f = if (sub("^[^_]*_([^\\.]*)\\..*$", "\\1", i) == sq_len) {
+        file_select = i
+      } 
+      f
+    }))
+  })
+  
+  #data = 
+  data_sq_ls = setNames(lapply(seq_along(group_sq_ls), function(i) {
+    lapply(group_sq_ls[[i]], function(file) {
+      map(file, ~ { read_tsv(file.path(paste0(working_dir, "/truncate_abund/", study_id), .),
+                             show_col_types = F)})
+    })
+  }), sq_len_ls)
+  
+  #samples = 
+  samples_sq_ls = lapply(seq_along(sq_len_ls), function(i) {
+    gsub("\\.bracken","", group_sq_ls[[i]])
+  })
+  
+  #data_newcol =
+  data_newcol_sq_ls = map2(
+    data_sq_ls,
+    samples_sq_ls,
+    ~ map2(
+      .x,
+      .y,
+      ~ mutate(.x[[1]], sample = .y)
+    )
+  )
+  
+  names(data_newcol_sq_ls)
+  #data_tidy = 
+  data_tidy_sq_ls=lapply(data_newcol_sq_ls, function(seq_len) {
+    bind_rows(seq_len)
+  })
+  
+  #data_w_count = 
+  data_w_count_sq_ls = lapply(data_tidy_sq_ls, function(seq_len) {
+    tidyr::pivot_wider(seq_len, 
+                       names_from = sample, 
+                       values_from = new_est_reads,
+                       id_cols = name,
+                       values_fill = 0)
+  })
+  
+  return(data_w_count_sq_ls)
 }
 
 #3. function to create phylogenize input:
