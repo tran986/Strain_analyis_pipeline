@@ -138,18 +138,23 @@ count_tbl_merge_aldex <- rbind(count_tbl_merge, other_names)
 #clean up metadata:
 metadata_tbl_merge$env <- factor(metadata_tbl_merge$env,
                                  levels=c("ND CTRL", "T2D metformin-"))
-
+View(metadata_tbl_merge)
 #fit into Aldex3 allowing uncertainty around the CLR-implied scale differences:
-#aldex_fit <- aldex(count_tbl_merge_aldex,
-#                   ~env,
-#                   metadata_tbl_merge,
-#                   nsample=1554,
-#                   scale=clr.sm,  # CLR assumption
-#                   gamma=1) 
+aldex_fit <- aldex(count_tbl_merge_aldex,
+                   ~ env + (1 | dataset),
+                   metadata_tbl_merge,
+                   nsample=2000, #no of Monte Carlo draws from Dirichlet-multinomial posterior - doc 
+                   scale=clr.sm,  # CLR assumption
+                   gamma=0.5)  #gamma controls how much uncertainty around CLR normalization assumption
+#gamma = 0 no scale uncertainty at all, gamma = 1 (full variance in CLR assumption)
 
 saveRDS(aldex_fit, paste0(working_dir, "/aldex3_merge_fit.rds"))
 #use this aldex3 fit for ashr -> phylogenize2 
 summary(aldex_fit)
+
+
+
+
 
 #-----------------------option 2:Making sure what we see is due to technical (length) of the seq:
 study_id_ls = c("CHN", "ERP002469_MH3", "ERP004605_MH1", "MCA", "SKK")
@@ -170,24 +175,14 @@ taxa_counts <- imap_dfr(
           study = study_name,
           length = as.numeric(len),
           sample = names(df)[-1],
-          n_taxa = colSums(df[-1] > 0)
-        )
+          n_taxa = colSums(df[-1] > 0))
       }
     )
   }
 )
 
-cor.test(
-  taxa_counts$length,
-  taxa_counts$n_taxa,
-  method = "spearman"
-)
-
-summary(model)
-
 #make a plot:
-library(ggpubr)
-ggplot(
+technical_check_plot = ggplot(
   taxa_counts,
   aes(x = length, y = n_taxa, group = sample)
 ) +
@@ -205,5 +200,6 @@ ggplot(
   ) +
   theme_classic()
 
+#-----------------------option 3:
 
 
