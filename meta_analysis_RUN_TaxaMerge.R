@@ -15,7 +15,7 @@ source(paste0(working_dir, "/meta_analysis_26.R"))
 #...do for all of the studies --> merge (combined) at taxa signals --> Phylogenize2
 
 #==================================================MERGE count table to run ANCOMBC:
-#ource("/fs/project/bradley.720/projects/meta_analysis_26/meta_analysis_26.R")
+#source("/fs/project/bradley.720/projects/meta_analysis_26/meta_analysis_26.R")
 #working_dir = "/fs/project/bradley.720/projects/meta_analysis_26"
 
 #---merge all count table from all datasets:
@@ -52,6 +52,14 @@ metadata_tbl_merge = bind_rows(metadata_ls) |> dplyr::select(sample, env, datase
 write.table(metadata_tbl_merge, 
             file = paste0(working_dir, "/mergeTaxa/ancom/combine_fix/metadata_merged.tab"),
             sep = "\t", row.names = FALSE)
+
+#-- look at the top 5 most used drugs: -- for MCA: (SKK study does not include that information in their study)
+treatment_counts <- metadata_MCA_t2d |>
+  select(treatment) |>
+  separate_longer_delim(treatment, delim = ";") |>
+  filter(!is.na(treatment), treatment != "") |>
+  count(treatment, name = "n_people", sort = TRUE) |>
+  arrange(-n_people)
 
 #--run ANCOMBC:
 #ancomMerge = ancomRun(count_tbl = count_tbl_merge,
@@ -119,6 +127,10 @@ core_out <- readRDS(paste0(working_dir, "/core_output_randTaxaMerge.rds"))
 RandMerge_phyloz_out_PD = gene_dist_func(phyloz_output = RandMerge_phyloz_out,
                core_out = core_out)
 
+RandMerge_phyloz_out_PD_func = left_join(RandMerge_phyloz_out_PD, 
+          core_out$list_pheno$pz.db$gene.to.fxn,
+          by = "gene") |> arrange(-PD) 
+
 #================================Validating Corio and Lachno hits by different means:
 #-----------------------option 1:Applies Aldex3 on the same data:
 library(ALDEx3)
@@ -142,7 +154,7 @@ metadata_tbl_merge$env <- factor(metadata_tbl_merge$env,
 View(metadata_tbl_merge)
 #fit into Aldex3 allowing uncertainty around the CLR-implied scale differences:
 aldex_fit <- aldex(count_tbl_merge_aldex,
-                   ~ env + (1 | dataset),
+                   ~ env + (1 | dataset), #CHANGE model for MET+
                    metadata_tbl_merge,
                    nsample=2000, #no of Monte Carlo draws from Dirichlet-multinomial posterior - doc 
                    scale=clr.sm,  # CLR assumption
@@ -187,8 +199,11 @@ aldex_phyloz_out[aldex_phyloz_out$q.value < 0.05, ]
 aldex_core_output = readRDS(paste0(working_dir, "/core_output_aldex3_taxaMerge_crosscheck.rds"))
 aldex_phyloz_PD=gene_dist_func(phyloz_output = aldex_phyloz_out,
                core_out = aldex_core_output)
+aldex_phyloz_PD_func = left_join(aldex_phyloz_PD, 
+                                 aldex_core_output$list_pheno$pz.db$gene.to.fxn,
+                                 by = "gene") |> arrange(-PD) |> View()
 
-taxa_overlap_aldex_ancom=intersect(aldex_phyloz_out[aldex_phyloz_out$q.value < 0.05, ]$taxon,
+taxa_overlap_aldex_ancom = intersect(aldex_phyloz_out[aldex_phyloz_out$q.value < 0.05, ]$taxon,
                                    RandMerge_phyloz_out[RandMerge_phyloz_out$q.value < 0.05, ]$taxon)
 
 #-----------------------option 2:Making sure what we see is due to technical (length) of the seq:
@@ -235,6 +250,33 @@ technical_check_plot = ggplot(
   ) +
   theme_classic()
 
+
+test = imap(import_bracken_truncate_ls[["SKK"]], function(x, n) {
+  pivot_longer(x, -name, names_to = "sample") |> mutate(len = as.numeric(n))
+}) |> bind_rows() 
+
+count_taxa = test |> group_by(sample) |> summarize(non_zero_count = sum(value > 0),
+                                                   len = unique(len))
+
+fit_count = lm(data = count_taxa, 
+   non_zero_count ~ len)
+summary(fit_count)
+
+data = test |> mutate(presence = 1*(value > 0))
+glm_fit_ls = lapply(split(data, data$name), function(taxa) {
+  glm_fit = glm(data = taxa,
+                presence ~ len,
+                family = binomial(link = "logit")) 
+  summary(glm_fit)$coefficients
+}) 
+
+glm_pval=map_dbl(glm_fit_ls, function(i) {
+  tryCatch(i["len", "Pr(>|z|)"],
+           error = function(e) NA)
+})
+glm_pval_adj=p.adjust(glm_pval, method = "BH")
+hist(glm_pval_adj)
+glm_pval_adj[glm_pval_adj < 1]
 #-----------------------option 3:
 
 
