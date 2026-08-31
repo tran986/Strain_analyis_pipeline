@@ -110,13 +110,14 @@ ggplot(RandMerge_results %>% arrange(plot_color), aes(x = effect.size, y = neglo
   geom_point(alpha = 0.7, size = 1.8) +
   geom_hline(yintercept = -log10(0.05), linetype = "dashed", color = "grey40") +
   scale_color_manual(values = color_values, name = "Taxon") +
-  labs(x = "Effect size", y = expression(-log[10](q)), title = "Merge at GENE: 377 genes significant ") +
+  labs(x = "Effect size", y = expression(-log[10](q)), title = "Merge at TAXA: 377 genes significant ") +
   theme_minimal(base_size = 12) +
   theme(legend.position = "right")
 
-#testing/Drafting
-RandMerge_results[RandMerge_results$sig_status == "Up, significant",] |> arrange(-effect.size) |> left_join(annotation_df, 
-                                                                                                            by = "gene") |> View()
+#add PD calculation:
+core_out <- readRDS(paste0(working_dir, "/core_output_randTaxaMerge.rds"))
+RandMerge_phyloz_out_PD = gene_dist_func(phyloz_output = RandMerge_phyloz_out,
+               core_out = core_out)
 
 #================================Validating Corio and Lachno hits by different means:
 #-----------------------option 1:Applies Aldex3 on the same data:
@@ -150,11 +151,45 @@ aldex_fit <- aldex(count_tbl_merge_aldex,
 
 saveRDS(aldex_fit, paste0(working_dir, "/aldex3_merge_fit.rds"))
 #use this aldex3 fit for ashr -> phylogenize2 
-summary(aldex_fit)
+#use this aldex3 fit for ashr -> phylogenize2 
+aldex_fit_res = summary(aldex_fit)
+
+#applied ashr on aldex3 output -> saved into "cross_check" dir under mergeTaxa:
+aldex_ash = ashr::ash(betahat = aldex_fit_res$estimate,
+                      sebetahat = aldex_fit_res$std.error)
+
+aldex_ash_res = aldex_ash$res
+aldex_ash_res$taxon <- aldex_fit_res$entity
+
+aldex_ash_res = aldex_ash_res %>%
+  dplyr::select(taxon, PosteriorMean, PosteriorSD) %>%
+  dplyr::rename("estimate"="PosteriorMean",
+                "stderr"="PosteriorSD")
+
+#save "provided" phenotype file:
+write.table(aldex_ash_res,
+            paste0(working_dir, "/mergeTaxa/cross_check/aldex_ash_res.tab"),            
+            sep = "\t", row.names = FALSE)
+
+phylogenize_run(provided_file_path = paste0(working_dir, "/mergeTaxa/cross_check/aldex_ash_res.tab"),
+                study_id = NULL,
+                phenotype = "provided",
+                ref_env = "ND CTRL",
+                out_dir = paste0(working_dir, "/mergeTaxa/cross_check/phylogenize_aldex"),
+                output_file = paste0(working_dir, "/mergeTaxa/cross_check/phylogenize_aldex/phylogenize.html"))	    
+
+#read into phylogenize output (for aldex3):
+aldex_phyloz_out = read.csv(paste0(working_dir, "/all-results-crosscheck_mergeTaxa_aldex.csv"))
+aldex_phyloz_out[aldex_phyloz_out$q.value < 0.05, ] 
 
 
+#add PD to Aldex3 run as well:
+aldex_core_output = readRDS(paste0(working_dir, "/core_output_aldex3_taxaMerge_crosscheck.rds"))
+aldex_phyloz_PD=gene_dist_func(phyloz_output = aldex_phyloz_out,
+               core_out = aldex_core_output)
 
-
+taxa_overlap_aldex_ancom=intersect(aldex_phyloz_out[aldex_phyloz_out$q.value < 0.05, ]$taxon,
+                                   RandMerge_phyloz_out[RandMerge_phyloz_out$q.value < 0.05, ]$taxon)
 
 #-----------------------option 2:Making sure what we see is due to technical (length) of the seq:
 study_id_ls = c("CHN", "ERP002469_MH3", "ERP004605_MH1", "MCA", "SKK")

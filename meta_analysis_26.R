@@ -887,89 +887,82 @@ Satt_DFCal = function(varianceCal_out_combined) #input: list of all_res_with
 }
   
 #20. functions to compute PD:
-
-gene_dist_func=function(sig_output, fam_abd, fam, local_run){
+gene_dist_func=function(phyloz_output, core_out) { #sig_output = RandMerge_phyloz_out, core_out = core.rds object from that phylogenize run
+  #sig_output=RandMerge_phyloz_out[RandMerge_phyloz_out$q.value< 0.05, ]
+  #filter out sign. genes:
+  sig_output = phyloz_output[phyloz_output$q.value< 0.05, ]
+  split_sig_output = split(sig_output, sig_output$taxon)
   
-  sig_output=RandMerge_phyloz_out[RandMerge_phyloz_out$q.value< 0.05, ]
+  #get the abundance phenotype results:
+  phenotype_res = enframe(core_out$list_pheno$phenotype_results$phenotype,
+          name = "taxon",
+          value = "phenotype_res")
   
   #get the tree from those families:
-  unique(sig_output$taxon)
+  tree=core_out$list_pheno$pz.db$trees
   
-  core_out = readRDS(paste0(working_dir, "/core_output.rds"))
-  
-  lapply(unique(sig_output$taxon), function(x) {
-    fam = x
-    tree = core_out$list_pheno$pz.db$trees$`CAG-508`
+  significant_tree = setNames(lapply(unique(sig_output$taxon), function(fam) {
+    tree = tree[[fam]]
     tree
+  }), unique(sig_output$taxon))
+  
+  #get the gene presence from those families:
+  gene = core_out$list_pheno$pz.db$gene.presence
+  gene_binary = setNames(lapply(unique(sig_output$taxon), function(fam) {
+    gene[[fam]]
+  }), unique(sig_output$taxon))
+
+  #calculate for PD 
+  
+  sig_output_PD=lapply(seq_along(unique(sig_output$taxon)), function(i) {
+    gene_mat = gene_binary[[i]]
+    gene_mat_filter = gene_mat[rownames(gene_mat) %in% split_sig_output[[i]]$gene, 
+                               colnames(gene_mat) %in% phenotype_res$taxon, 
+                               drop = F]
+    gene_binary_dense=as.matrix(gene_mat_filter)
+    
+    #for those genes with 0 > 1 (do PD for 1)
+    #for those genes with 0 < 1 (do PD for 0)
+    #calculate prevalence of 0 and 1:
+    gene_prevalence <- t(apply(gene_binary_dense, 1, function(x) {
+      c(zeros     = sum(x == 0, na.rm = TRUE),
+        non_zeros = sum(x > 0, na.rm = TRUE))
+    }))
+    
+    gene_prevalence=as.data.frame(gene_prevalence) %>%
+      mutate(zero_prev=ifelse(zeros > non_zeros, T, F))
+    
+    #put those with more 0 separated from those with more 1:
+    gene_binary_dense_T=gene_binary_dense[rownames(gene_binary_dense) %in% rownames(gene_prevalence[gene_prevalence$zero_prev == T, ]), ,drop = F]
+    gene_binary_dense_F=gene_binary_dense[rownames(gene_binary_dense) %in% rownames(gene_prevalence[gene_prevalence$zero_prev == F, ]), , drop = F]
+    
+    #calculate faith those with more 0 than 1:
+    tree <- significant_tree[[i]]
+    if (length(gene_binary_dense_T) > 0) {
+      faith_d_T=pd(gene_binary_dense_T,  tree) %>% rownames_to_column(var="gene")
+    } else {
+      faith_d_T <- data.frame(
+        gene = character(0),
+        PD = numeric(0),
+        SR = numeric(0)
+      )
+    }
+    #for those with more 1 than 0, calculate for PD but opposite (count 0 instead of 1)
+    inv_gene_binary_F=ifelse(gene_binary_dense_F == 0, 1, 0) #invert 1 to 0 (vice versa)
+    if (nrow(inv_gene_binary_F) > 0) {
+      faith_d_F=pd(inv_gene_binary_F, tree) %>% rownames_to_column(var="gene")
+    } else {
+      faith_d_F=tibble(gene = character())
+    }
+    
+    faith_d=rbind(faith_d_T, faith_d_F)
+    
+    #combine faith PD with significant output df:
+    split_sig_output[[i]]=left_join(split_sig_output[[i]], faith_d, by = c("gene")) 
   })
-  #nrow(sig_output)
-  #fam_abd=tara_fam_abd
-  #fam="Flavobacteriaceae"
   
-  phenotype_res_df=enframe(fam_abd$list_pheno$phenotype_results$phenotype, 
-                           name="Species_MGYG",
-                           value="phenotype_res_value") %>%
-    left_join(fam_abd$list_pheno$pz.db$taxonomy, by = c("Species_MGYG"="cluster")) %>%
-    filter(family == fam)
-  
-  #gene_binary=fam_abd$list_pheno$pz.db$gene.presence[[fam]]
-  #gene_binary <- gene_binary[rownames(gene_binary) %in% sig_output$gene, 
-  #                           colnames(gene_binary) %in% phenotype_res_df$Species_MGYG]
-  
-  gene_binary=fam_abd$list_pheno$pz.db$gene.presence[[fam]]
-  gene_binary=gene_binary[,colnames(gene_binary) %in% phenotype_res_df$Species_MGYG]
-  
-  #calculate for Faith Diversity:
-  tree=fam_abd$list_pheno$pz.db$trees[[fam]]
-  gene_binary_dense=as.matrix(gene_binary)
-  
-  #for those genes with 0 > 1 (do PD for 1)
-  #for those genes with 0 < 1 (do PD for 0)
-  #calculate prevalence of 0 and 1:
-  gene_prevalence <- t(apply(gene_binary_dense, 1, function(x) {
-    c(zeros     = sum(x == 0, na.rm = TRUE),
-      non_zeros = sum(x > 0, na.rm = TRUE))
-  }))
-  
-  gene_prevalence=as.data.frame(gene_prevalence) %>%
-    mutate(zero_prev=ifelse(zeros > non_zeros, T, F))
-  
-  #put those with more 0 separated from those with more 1:
-  gene_binary_dense_T=gene_binary_dense[rownames(gene_binary_dense) %in% rownames(gene_prevalence[gene_prevalence$zero_prev == T, ]), ]
-  gene_binary_dense_F=gene_binary_dense[rownames(gene_binary_dense) %in% rownames(gene_prevalence[gene_prevalence$zero_prev == F, ]), ]
-  
-  #calculate faith those with more 0 than 1:
-  faith_d_T=pd(gene_binary_dense_T, tree) %>% rownames_to_column(var="gene")
-  
-  #for those with more 1 than 0, calculate for PD but opposite (count 0 instead of 1)
-  inv_gene_binary_F=ifelse(gene_binary_dense_F == 0, 1, 0) #invert 1 to 0 (vice versa)
-  if (nrow(inv_gene_binary_F) > 0) {
-    faith_d_F=pd(inv_gene_binary_F, tree) %>% rownames_to_column(var="gene")
-  } else {
-    faith_d_F=tibble(gene = character())
-  }
-  
-  faith_d=rbind(faith_d_T, faith_d_F)
-  #faith_d %>% filter(gene %in% sig_output$gene)
-  #intersect(faith_d$gene, sig_output$gene)
-  
-  #drop "linker_info" - keep unique gene rows:
-  function_df=fam_abd$list_pheno$pz.db$gene.to.fxn %>% 
-    distinct(gene, .keep_all = TRUE) %>%
-    dplyr::select(gene, `function`, accession)
-  
-  #merge with p-value and padj:
-  #nrow(sig_output)
-  if (local_run == T) {
-    species_count=sig_output[, c("gene", "Estimate", "padj", "p.value")]  %>%
-      left_join(faith_d, by="gene") 
-  } else {
-    species_count=sig_output[, c("gene", "effect.size", "padj", "p.value")]  %>%
-      left_join(faith_d, by="gene") 
-  }
-  res_function=species_count %>% left_join(function_df, by = "gene")
-  
-  res_function
-  
+  return(bind_rows(sig_output_PD))
 }
+
+
 
