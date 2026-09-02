@@ -54,12 +54,14 @@ write.table(metadata_tbl_merge,
             sep = "\t", row.names = FALSE)
 
 #-- look at the top 5 most used drugs: -- for MCA: (SKK study does not include that information in their study)
-treatment_counts <- metadata_MCA_t2d |>
+treatment_counts <- sampleMetadata[sampleMetadata$study_name == "MetaCardis_2020_a", ] |>
   select(treatment) |>
   separate_longer_delim(treatment, delim = ";") |>
   filter(!is.na(treatment), treatment != "") |>
   count(treatment, name = "n_people", sort = TRUE) |>
   arrange(-n_people)
+
+View(sampleMetadata[sampleMetadata$study_name == "MetaCardis_2020_a", ] )
 
 #--run ANCOMBC:
 #ancomMerge = ancomRun(count_tbl = count_tbl_merge,
@@ -250,33 +252,12 @@ technical_check_plot = ggplot(
   ) +
   theme_classic()
 
+#apply correlation len vs count of taxa:
+cross_check = setNames(lapply(study_id_ls, function(id) {
+  cross_check_func(study_id = id,
+                   import_bracken_truncate_ls = import_bracken_truncate_ls)
+}), study_id_ls)
 
-test = imap(import_bracken_truncate_ls[["SKK"]], function(x, n) {
-  pivot_longer(x, -name, names_to = "sample") |> mutate(len = as.numeric(n))
-}) |> bind_rows() 
-
-count_taxa = test |> group_by(sample) |> summarize(non_zero_count = sum(value > 0),
-                                                   len = unique(len))
-
-fit_count = lm(data = count_taxa, 
-   non_zero_count ~ len)
-summary(fit_count)
-
-data = test |> mutate(presence = 1*(value > 0))
-glm_fit_ls = lapply(split(data, data$name), function(taxa) {
-  glm_fit = glm(data = taxa,
-                presence ~ len,
-                family = binomial(link = "logit")) 
-  summary(glm_fit)$coefficients
-}) 
-
-glm_pval=map_dbl(glm_fit_ls, function(i) {
-  tryCatch(i["len", "Pr(>|z|)"],
-           error = function(e) NA)
-})
-glm_pval_adj=p.adjust(glm_pval, method = "BH")
-hist(glm_pval_adj)
-glm_pval_adj[glm_pval_adj < 1]
 #-----------------------option 3:
 
 

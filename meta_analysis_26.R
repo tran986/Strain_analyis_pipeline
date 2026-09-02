@@ -964,5 +964,43 @@ gene_dist_func=function(phyloz_output, core_out) { #sig_output = RandMerge_phylo
   return(bind_rows(sig_output_PD))
 }
 
-
+#21. function to cross check taxa_merge pipeline (to see if the technical )
+cross_check_func=function(study_id, import_bracken_truncate_ls) { 
+  bracken_map_df = imap(import_bracken_truncate_ls[[study_id]], function(x, n) {
+    pivot_longer(x, -name, names_to = "sample") |> mutate(len = as.numeric(n))
+  }) |> bind_rows() 
+  
+  #create a function to apply correlation between seq length and taxa count
+  count_taxa = bracken_map_df |> 
+    group_by(sample) |> 
+    summarize(non_zero_count = sum(value > 0),
+              len = unique(len))
+  
+  fit_count = lm(data = count_taxa, 
+                 non_zero_count ~ len)
+  
+  #function to check to see if the seq of the study
+  #biased in each of the taxon:
+  pres_df = bracken_map_df |> mutate(presence = 1*(value > 0))
+  
+  #return(summary(fit_count))
+  glm_fit_ls = lapply(split(pres_df, pres_df$name), function(taxa) {
+    glm_fit = glm(data = taxa,
+                  presence ~ len,
+                  family = binomial(link = "logit")) 
+    summary(glm_fit)$coefficients
+  }) 
+  
+  glm_pval=map_dbl(glm_fit_ls, function(i) {
+    tryCatch(i["len", "Pr(>|z|)"],
+             error = function(e) NA)
+  })
+  glm_pval_adj=p.adjust(glm_pval, method = "BH")
+  
+  return(list(
+    lm_res = summary(fit_count), 
+    glm_res = glm_pval_adj
+  ))
+  
+}
 
