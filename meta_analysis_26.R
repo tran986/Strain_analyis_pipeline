@@ -146,7 +146,7 @@ import_bracken_truncate = function(study_id) {
 extract_phyloz_metadata=function(import_bracken_out, 
                                  metadata,
                                  study_id, #study_id = CHN, MHN1, MHN3, 4, SKK, MCA, etc..
-                                 envs_compared = c("ND CTRL", "T2D metformin-")) { 
+                                 envs_compared = c("ND CTRL", "T2D metformin-")) { #change envs_compared = c("ND CTRL", "T2D metformin-", "T2D metformin+) if needed
   #import_bracken_out = test
   #metadata = CHNs_md_final 
   #clean up metadata:
