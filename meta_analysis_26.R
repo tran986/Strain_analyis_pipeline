@@ -174,7 +174,7 @@ extract_phyloz_metadata=function(import_bracken_out,
   #filter 2 envs that will be compared:
   metadata_filter=metadata_clean %>% filter(env %in% envs_compared)
   
-  write.table(metadata_filter, file = paste0(working_dir, "/pipeline1/phylogenize_out/", study_id, "/metadata_filter.tsv"), sep = "\t", row.names = FALSE, quote = FALSE)
+  write.table(metadata_filter, file = paste0(working_dir, "/ancomRun/phylogenize_out/", study_id, "/metadata_filter.tsv"), sep = "\t", row.names = FALSE, quote = FALSE)
   return(metadata_filter)
   
 }
@@ -229,7 +229,10 @@ phylogenize_run=function(provided_file_path = NULL,
 
 #PIPELINE2: function for pre-phylogenize merging:
 #5. function to run ancombc inputs separately:
-aancomRun = function(count_tbl, study_id=NULL, metadata){
+aancomRun = function(count_tbl, 
+                     study_id=NULL, #if study_id = NULL (randMerge is used - TaxaMerge pipeline)
+                     metadata, 
+                     fixed_effect_used = F){ #if metformin+ is used: fixed_effect_used = T
   
   if (!is.null(study_id)) {	
     count = count_tbl %>% column_to_rownames(var = "name")
@@ -246,9 +249,16 @@ aancomRun = function(count_tbl, study_id=NULL, metadata){
     )
     #apply ancombc2:
     print("fitting ANCOMBC")
-    res_ancom=ANCOMBC::ancombc2(data = tse,
-                                assay_name = "counts",
-                                fix_formula = "env")
+    if (fixed_effect_used ==F) {
+      res_ancom = ANCOMBC::ancombc2(data = tse,
+                                  assay_name = "counts",
+                                  fix_formula = "env")
+    } else {
+      res_ancom = ANCOMBC::ancombc2(data = tse,
+                                    assay_name = "counts",
+                                    fix_formula = "env + treatment")
+    }
+    
     #save:
     saveRDS(res_ancom, paste0(working_dir, "/pipeline2/ancom/", study_id, "_ancombc_res.rds"))
     
@@ -263,12 +273,20 @@ aancomRun = function(count_tbl, study_id=NULL, metadata){
     
     #apply ancombc2:
     print("fitting ANCOMBC")
-    res_ancom=ANCOMBC::ancombc2(data = tse,
-                                assay_name = "counts",
-                                fix_formula = "env",
-                                rand_formula = "(1 | dataset)",
-                                n_cl = 16)	
-    
+    if (fixed_effect_used == F) {
+      res_ancom = ANCOMBC::ancombc2(data = tse,
+                                    assay_name = "counts",
+                                    fix_formula = "env + treatment",
+                                    rand_formula = "(1 | dataset)",
+                                    n_cl = 16)
+    } else {
+      res_ancom = ANCOMBC::ancombc2(data = tse,
+                                    assay_name = "counts",
+                                    fix_formula = "env",
+                                    rand_formula = "(1 | dataset)",
+                                    n_cl = 16)
+    }
+
     #save:
     saveRDS(res_ancom, paste0(working_dir, "/mergeTaxa/ancom/combine_fix/merged_ancom_res.rds"))
     
