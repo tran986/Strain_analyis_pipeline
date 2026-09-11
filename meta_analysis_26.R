@@ -144,7 +144,7 @@ import_bracken_truncate = function(study_id) {
 
 #3. function to create phylogenize input:
 extract_phyloz_metadata=function(import_bracken_out, 
-                                 metadata,
+                                 metadata, #this is metadata from ENA/NCBI website for all sequences (used examples below)
                                  study_id, #study_id = CHN, MHN1, MHN3, 4, SKK, MCA, etc..
                                  envs_compared = c("ND CTRL", "T2D metformin-")) { #change envs_compared = c("ND CTRL", "T2D metformin-", "T2D metformin+) if needed
   #import_bracken_out = test
@@ -229,7 +229,7 @@ phylogenize_run=function(provided_file_path = NULL,
 
 #PIPELINE2: function for pre-phylogenize merging:
 #5. function to run ancombc inputs separately:
-aancomRun = function(count_tbl, 
+ancomRun = function(count_tbl, 
                      study_id=NULL, #if study_id = NULL (randMerge is used - TaxaMerge pipeline)
                      metadata, 
                      fixed_effect_used = F){ #if metformin+ is used: fixed_effect_used = T
@@ -785,7 +785,8 @@ preVpost_HeatmapMake = function(direction_es, merge_resPre, res_listPost) {
 # explicitly loads it into your environment:
 #13. function to retrieve metadata info for each T2D studies found in curatedMetagenomicData:
 #output a list of metadata control and metadata t2d:
-metadataRetrieve=function(study_id, confounder_para = c("metformin")) #
+metadataRetrieve=function(study_id, confounder_para = c("metformin"), fixed_effect_used = F) #if fixed effected used, included "metformin" sample
+  
 {
 
   study_code=data.frame(
@@ -806,9 +807,14 @@ metadataRetrieve=function(study_id, confounder_para = c("metformin")) #
   
   #----filter out those used antibiotics for control:
   #----filter out those used metformin:
-  metadata = lapply(metadata, function(t) 
-    t |> filter(!grepl(confounder_para, treatment),
-                antibiotics_current_use != "yes"))
+  if (fixed_effect_used == F){
+    metadata = lapply(metadata, function(t) 
+      t |> filter(!grepl(confounder_para, treatment),
+                  antibiotics_current_use != "yes"))
+  } else { #if used fixed effect -> re-arrange metadata into 3 columns
+    metadata = lapply(metadata, function(t) 
+      t |> filter(antibiotics_current_use != "yes"))
+  }
   
   return(metadata)
 }
@@ -1021,4 +1027,41 @@ cross_check_func=function(study_id, import_bracken_truncate_ls) {
   ))
   
 }
+
+#22. function to run aldex3 (along side ANCOMBC2) to see if we see the same trends/results?
+aldexRun = function(count_tbl, metadata_tbl, fix_effect_used = F) {
+  
+  #modify metadata and count tbl format:
+  metadata_tbl = metadata_tbl |> tibble::column_to_rownames(var = "sample")
+  count_tbl = count_tbl %>%
+    dplyr::select(name, rownames(metadata_tbl)) %>%  #where count_tbl = merged count_tbl
+    column_to_rownames(var = "name")
+  
+  #keep only taxa with <= 75% zeros (according to Aldex recommd):
+  keep_names=row.names(count_tbl[((rowSums(count_tbl==0))/ncol(count_tbl))<=0.75,])
+  other_names=colSums(count_tbl[((rowSums(count_tbl==0))/ncol(count_tbl))>0.75,])
+  count_tbl <- count_tbl[keep_names,]
+  count_tbl <- rbind(count_tbl, other_names)
+  
+  #fitting Aldex:
+  aldex_fit = ifelse(fix_effect_used == T,
+                     aldex(count_tbl,
+                           ~ disease + treatment + (1 | dataset),
+                           metadata_tbl,
+                           nsample = 2000,
+                           scale = clr.sm,
+                           gamma = 0.5), 
+                     aldex(count_tbl,
+                           ~ disease + (1 | dataset),
+                           metadata_tbl,
+                           nsample = 2000,
+                           scale = clr.sm,
+                           gamma = 0.5)
+  )
+  
+  return(aldex_fit)
+  
+}
+
+
 
