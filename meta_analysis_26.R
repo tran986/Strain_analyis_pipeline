@@ -1063,5 +1063,67 @@ aldexRun = function(count_tbl, metadata_tbl, fix_effect_used = F) {
   
 }
 
+#23.
+aldexExtract=function(aldex_output) {
+  mean = apply(aldex_output$estimate,
+               c(1,2), mean)
+  mean_df = as.data.frame(t(mean))
+  mean_df$taxon<-rownames(mean_df)
+  rownames(mean_df)<-NULL
+  mean_df = mean_df[,c("taxon","(Intercept)","diseaseT2D", "treatmentyes")]
+  
+  sd = apply(aldex_output$std.error,
+             c(1,2), sd)
+  sd_df = as.data.frame(t(sd))
+  sd_df$taxon <- rownames(sd_df)
+  rownames(sd_df)<-NULL
+  sd_df = sd_df[, c("taxon", "(Intercept)", "diseaseT2D", "treatmentyes")]
+  
+  return(list(estimate = mean_df,
+              std.error = sd_df))
+}
 
+#24.
+figMake_phyloz=function(phyloz_out) {
+  #phyloz_out = fix_eff_phyloz_out_t2d
+  phyloz_out = phyloz_out %>%
+    mutate(
+      neglog10q = -log10(q.value),
+      sig_status = case_when(
+        q.value < 0.05 & effect.size > 0 ~ "Up, significant",
+        q.value < 0.05 & effect.size < 0 ~ "Down, significant",
+        TRUE ~ "Not significant"),
+      plot_color = if_else(neglog10q >= -log10(0.05), as.character(taxon), "Not significant")
+    )
+  
+  taxon_levels = sort(unique(phyloz_out$plot_color[phyloz_out$plot_color != "Not significant"]))
+  taxon_colors = setNames(hue_pal()(length(taxon_levels)), taxon_levels) 
+  color_values = c(taxon_colors, "Not significant" = "grey80")
+  
+  phyloz_out$plot_color = factor(
+    phyloz_out$plot_color,
+    levels = c("Not significant", taxon_levels)
+  )
 
+  plot = ggplot(phyloz_out %>% arrange(plot_color), aes(x = effect.size, y = neglog10q, color = plot_color)) +
+    geom_point(alpha = 0.7, size = 1.8) +
+    geom_hline(yintercept = -log10(0.05), linetype = "dashed", color = "grey40") +
+    scale_color_manual(values = color_values, name = "Taxon") +
+    labs(x = "Effect size", y = expression(-log[10](q)), title = paste0("Merge at TAXA: ",
+                                                                        nrow(phyloz_out[phyloz_out$q.value< 0.05, ]),
+                                                                        " genes significant")) +
+    theme_minimal(base_size = 12) +
+    theme(legend.position = "right")
+  return(plot)
+}
+
+#25.  
+pdAdd = function(core_out, phyloz_out) {
+  phyloz_out_PD = gene_dist_func(phyloz_output = phyloz_out,
+                                 core_out = core_out)
+  
+  phyloz_out_PD = left_join(phyloz_out_PD, 
+                            core_out$list_pheno$pz.db$gene.to.fxn,
+                            by = "gene") |> arrange(-PD) 
+  return(phyloz_out_PD)
+}
