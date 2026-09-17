@@ -1155,8 +1155,9 @@ aldex_ancom_dbRMake = function(fam,
                                aldex_df) { #aldex_df = phenotype_val_aldex_t2d
   #fam = "Coriobacteriaceae"
   fam_species = core_out$list_pheno$pz.db$species[[fam]]
-  #aldex_df = phenotype_val_aldex_t2d
-  #ancom_df = phenotype_val_ancom_t2d
+  #aldex_df = sd_aldex_t2d
+  #ancom_df = sd_ancom_t2d
+  #sd_or_pheno = "sd"
   
   #first ring - tree:
   tree = core_out$list_pheno$pz.db$trees[[fam]]
@@ -1168,20 +1169,31 @@ aldex_ancom_dbRMake = function(fam,
                              aldex_df$species)
   
   #2nd ring: phenotype of ancom:
-  df_pheno_ancom = ancom_df |> 
+  ancom_df = ancom_df |> 
     filter(species %in% common_species &
              species %in% fam_species) 
   
   #3rd ring: phenotype of aldex:
-  df_pheno_aldex = aldex_df |> 
+  aldex_df = aldex_df |> 
     filter(species %in% common_species &
              species %in% fam_species) |>
     arrange(match(species, common_species))
   
   #making a limit used for both phenotypes:
-  max_aldex_pheno = max(abs(df_pheno_aldex$pheno_aldex_mod))
-  max_ancom_pheno = max(abs(df_pheno_ancom$pheno_ancom))
-  if (max_aldex_pheno > max_ancom_pheno) {
+  if (sd_or_pheno == "pheno") {
+    max_aldex = max(abs(aldex_df$pheno_aldex_mod))
+    max_ancom = max(abs(ancom_df$pheno_ancom))
+  } else {
+    max_aldex = max(aldex_df$sd_aldex)
+    min_aldex = min(aldex_df$sd_aldex)
+    max_ancom = max(ancom_df$sd_ancom)
+    min_ancom = min(ancom_df$sd_ancom)
+    if (min_aldex > min_ancom) {
+      min_used = min_ancom
+    } else {min_used = min_aldex}
+  }
+  
+  if (max_aldex > max_ancom) {
     max_used = max_aldex_pheno
   } else {
     max_used = max_ancom_pheno
@@ -1192,20 +1204,23 @@ aldex_ancom_dbRMake = function(fam,
   double_ring = ring1 +
     ggnewscale::new_scale_fill() +
     ggtreeExtra::geom_fruit(
-      data = df_pheno_aldex,
-      aes(x = 50, y = species, fill = pheno_aldex_mod),
+      data = aldex_df,
+      aes(x = 50, y = species, fill = ifelse(sd_or_pheno == "pheno", pheno_aldex_mod, sd_aldex)),
       geom = geom_tile,
       width = width,
       linewidth =  33) +
     scale_fill_gradientn(
       name = paste0("Aldex3 ", name, " - r1"),
       colours = bigrange_grad2,
-      limits = c(-max_used, max_used)
-    ) +
+      limits = if (sd_or_pheno == "pheno") {
+        c(-max_used, max_used)
+      } else {
+        c(min_used, max_used)}
+      ) +
     ggnewscale::new_scale_fill() +
     ggtreeExtra::geom_fruit(
-      data = df_pheno_ancom,
-      aes(x = 50, y = species, fill = pheno_ancom),
+      data = ancom_df,
+      aes(x = 50, y = species, fill = ifelse(sd_or_pheno == "pheno", pheno_ancom, sd_ancom)),
       geom = "geom_tile",
       width = width,
       linewidth = 33,
@@ -1213,7 +1228,11 @@ aldex_ancom_dbRMake = function(fam,
     scale_fill_gradientn(
       name = paste0("ANCOMBC ", name, " - r2"),
       colours = bigrange_grad2,
-      limits = c(-max_used, max_used)
+      limits = if (sd_or_pheno == "pheno") {
+        c(-max_used, max_used)
+      } else {
+        c(min_used, max_used)
+      }
     ) +
     theme(
       plot.title = element_text(size = 13, hjust = 0.5, margin = margin(b = 0), face ="bold"),
@@ -1223,7 +1242,7 @@ aldex_ancom_dbRMake = function(fam,
       legend.box = "horizontal",
       legend.box.just = "center",
       legend.title = element_text(size = 13, face = "bold", margin = margin(b = 7) ),
-      legend.text = element_text(size = 13),
+      legend.text = element_text(angle = 90, size = 13),
       legend.key.height = unit(18, "pt"),  
       legend.key.width  = unit(20, "pt"),
       plot.caption = element_text(size = 13, face = "bold", hjust = 0.5, margin = margin(t = 5)),     # space above caption
