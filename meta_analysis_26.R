@@ -14,6 +14,7 @@ library(picante)
 library(UpSetR)
 library(ggVennDiagram)
 library(circlize)
+library(ggtree)
 library(curatedMetagenomicData)
 #devtools::load_all("/fs/project/bradley.720/projects/phylogenize_v2/phylogenize_repermulize/package/repermulize")
 devtools::load_all("/Users/tran.986/Desktop/phylogenize/package/phylogenize")
@@ -1127,3 +1128,110 @@ pdAdd = function(core_out, phyloz_out) {
                             by = "gene") |> arrange(-PD) 
   return(phyloz_out_PD)
 }
+
+#26.function to transform aldex values to be compatible to ancombc values
+aldex_valueConvert = function(value_aldex) { #e.g., value_aldex = phenotype_val_aldex_t2d$value_aldex
+  #convert from log2(x) = phenotype value in aldex to x
+  x = 2 ** value_aldex
+  
+  #convert from x to ln (natural log):
+  ancom_compat_val = log(x)
+  return(ancom_compat_val)
+}
+
+#27. a function that takes in put of enframe() *sd or pheno* of ancom or aldex:
+bigrange_grad2 <- c(
+  "#1551aaff",
+  "#1573ffff",
+  "#ffffff88",
+  "#fca415ff",
+  "#aa7115ff"
+)
+
+aldex_ancom_dbRMake = function(fam,
+                               sd_or_pheno = "pheno",
+                               core_out, #any core.rds will work
+                               ancom_df, #ancom_df = phenotype_val_ancom_t2d -- enframe() output from rds.
+                               aldex_df) { #aldex_df = phenotype_val_aldex_t2d
+  #fam = "Coriobacteriaceae"
+  fam_species = core_out$list_pheno$pz.db$species[[fam]]
+  #aldex_df = phenotype_val_aldex_t2d
+  #ancom_df = phenotype_val_ancom_t2d
+  
+  #first ring - tree:
+  tree = core_out$list_pheno$pz.db$trees[[fam]]
+  ring1=ggtree(tree, layout = "circular", color = "#555555")  +
+    theme(text=element_text(size = 20))
+  
+  #only keep the species overlap between 2 tools:
+  common_species = intersect(ancom_df$species,
+                             aldex_df$species)
+  
+  #2nd ring: phenotype of ancom:
+  df_pheno_ancom = ancom_df |> 
+    filter(species %in% common_species &
+             species %in% fam_species) 
+  
+  #3rd ring: phenotype of aldex:
+  df_pheno_aldex = aldex_df |> 
+    filter(species %in% common_species &
+             species %in% fam_species) |>
+    arrange(match(species, common_species))
+  
+  #making a limit used for both phenotypes:
+  max_aldex_pheno = max(abs(df_pheno_aldex$pheno_aldex_mod))
+  max_ancom_pheno = max(abs(df_pheno_ancom$pheno_ancom))
+  if (max_aldex_pheno > max_ancom_pheno) {
+    max_used = max_aldex_pheno
+  } else {
+    max_used = max_ancom_pheno
+  }
+  
+  if (sd_or_pheno == "pheno") {name = "pheno"} else {name = "sd"}
+  if (fam == "Coriobacteriaceae") {width = 0.02} else {width = 0.06}
+  double_ring = ring1 +
+    ggnewscale::new_scale_fill() +
+    ggtreeExtra::geom_fruit(
+      data = df_pheno_aldex,
+      aes(x = 50, y = species, fill = pheno_aldex_mod),
+      geom = geom_tile,
+      width = width,
+      linewidth =  33) +
+    scale_fill_gradientn(
+      name = paste0("Aldex3 ", name, " - r1"),
+      colours = bigrange_grad2,
+      limits = c(-max_used, max_used)
+    ) +
+    ggnewscale::new_scale_fill() +
+    ggtreeExtra::geom_fruit(
+      data = df_pheno_ancom,
+      aes(x = 50, y = species, fill = pheno_ancom),
+      geom = "geom_tile",
+      width = width,
+      linewidth = 33,
+      offset = 0.009) +
+    scale_fill_gradientn(
+      name = paste0("ANCOMBC ", name, " - r2"),
+      colours = bigrange_grad2,
+      limits = c(-max_used, max_used)
+    ) +
+    theme(
+      plot.title = element_text(size = 13, hjust = 0.5, margin = margin(b = 0), face ="bold"),
+      legend.box.margin = margin(0, 0, 0, 0),
+      legend.spacing.x = unit(4, "pt"),
+      legend.position = "bottom",
+      legend.box = "horizontal",
+      legend.box.just = "center",
+      legend.title = element_text(size = 13, face = "bold", margin = margin(b = 7) ),
+      legend.text = element_text(size = 13),
+      legend.key.height = unit(18, "pt"),  
+      legend.key.width  = unit(20, "pt"),
+      plot.caption = element_text(size = 13, face = "bold", hjust = 0.5, margin = margin(t = 5)),     # space above caption
+      plot.margin = margin(20, 20, 20, 20)
+    ) + 
+    labs(title = paste0(fam, "- estimates compared"))
+  return(double_ring)
+  
+}
+
+

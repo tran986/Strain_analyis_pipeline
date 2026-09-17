@@ -220,7 +220,12 @@ fix_eff_phyloz_out_t2d = read.csv(paste0(working_dir, "/all-results-t2d-fix-eff.
 fix_eff_phyloz_out_met = read.csv(paste0(working_dir, "/all-results-met-fix-eff.csv"))
 
 #run function 24 to make a figure:
-figMake_phyloz(phyloz_out = fix_eff_phyloz_out_t2d)
+t2d_taxa = figMake_phyloz(phyloz_out = fix_eff_phyloz_out_t2d)
+ggsave(plot = t2d_taxa, 
+       filename = paste0(working_dir,"/test_t2d.png"),
+       width = 8,
+       height = 6,
+       dpi = 600)
 figMake_phyloz(phyloz_out = fix_eff_phyloz_out_met)
 
 #add PD calculation:
@@ -231,11 +236,11 @@ core_out_fix_eff_met = readRDS(paste0(working_dir, "/core_output/core_output-fix
 pdAdd(core_out=core_outRandMerge,
       phyloz_out = RandMerge_phyloz_out)
 
-pdAdd(core_out=core_out_fix_eff_t2d,
-      phyloz_out = fix_eff_phyloz_out_t2d)
+ancom_fixeff_t2d=pdAdd(core_out=core_out_fix_eff_t2d,
+      phyloz_out = fix_eff_phyloz_out_t2d) 
 
-pdAdd(core_out=core_out_fix_eff_met,
-      phyloz_out = fix_eff_phyloz_out_met)
+ancom_fixeff_met = pdAdd(core_out=core_out_fix_eff_met,
+      phyloz_out = fix_eff_phyloz_out_met) 
 
 #================================Validating Corio and Lachno hits by different means:
 #-----------------------option 1:Applies Aldex3 on the same data:
@@ -315,6 +320,28 @@ taxa_overlap_aldex_ancom = intersect(aldex_phyloz_out[aldex_phyloz_out$q.value <
 aldex_core_fix_eff_t2d = readRDS(paste0(working_dir, "/core_output/core_output-aldex-fix-eff-t2d.rds"))
 aldex_core_fix_eff_met = readRDS(paste0(working_dir, "/core_output/core_output-aldex-fix-eff-met.rds"))
 
+phenotype_val_aldex_t2d=enframe(aldex_core_fix_eff_t2d$list_pheno$phenotype_results$phenotype,
+        value = "pheno_aldex",
+        name = "species")
+
+sd_aldex_t2d = enframe(aldex_core_fix_eff_t2d$list_pheno$phenotype_results$pheno_sd,
+                       value = "sd_aldex",
+                       name = "species")
+
+phenotype_val_ancom_t2d = enframe(core_out_fix_eff_t2d$list_pheno$phenotype_results$phenotype,
+                                  value = "pheno_ancom",
+                                  name = "species")
+
+sd_ancom_t2d = enframe(core_out_fix_eff_t2d$list_pheno$phenotype_results$pheno_sd,
+                       value = "sd_ancom",
+                       name = "species")
+
+
+cor(join_tbl$value_aldex,
+    join_tbl$value_ancom,
+    method = "spearman")
+
+
 aldex_fix_eff_phyloz_t2d = read.csv(paste0(working_dir, "/all-results-aldex-fix-eff-t2d.csv"))
 aldex_fix_eff_phyloz_met = read.csv(paste0(working_dir, "/all-results-aldex-fix-eff-met.csv"))
 
@@ -323,10 +350,10 @@ figMake_phyloz(aldex_fix_eff_phyloz_t2d)
 figMake_phyloz(aldex_fix_eff_phyloz_met)
 
 #add PD:
-pdAdd(core_out = aldex_core_fix_eff_t2d,
-      phyloz_out = aldex_fix_eff_phyloz_t2d)
+aldex_fix_eff_t2d=pdAdd(core_out = aldex_core_fix_eff_t2d,
+      phyloz_out = aldex_fix_eff_phyloz_t2d) 
 
-pdAdd(core_out = aldex_core_fix_eff_met,
+aldex_fix_eff_met = pdAdd(core_out = aldex_core_fix_eff_met,
       phyloz_out = aldex_fix_eff_phyloz_met)
 
 #-----------------------option 2:Making sure what we see is due to technical (length) of the seq:
@@ -386,7 +413,9 @@ hist(cross_check$CHN$glm_res)
 
 #MH3:-- all good
 cross_check$ERP002469_MH3$lm_res
-hist(cross_check$ERP002469_MH3$glm_res)
+length(cross_check$ERP002469_MH3$glm_res |> 
+                 (\(x) x[!is.na(x)])()
+               )
 
 #MH1: --all good
 cross_check$ERP004605_MH1$lm_res
@@ -396,10 +425,30 @@ hist(cross_check$ERP004605_MH1$glm_res)
 cross_check$MCA$lm_res
 hist(cross_check$MCA$glm_res)
 
-#SKK:
+#SKK: lm is sign. but histogram is good (no bias against taxa, but there is slightly correlated bw seq length and count)
 cross_check$SKK$lm_res
 hist(cross_check$SKK$glm_res) #this is ok
 
-#-----------#-----------#-----------------------option 3:
+
+#================================Checking the consensus between Aldex2 and ANCOMBC:
+#####----BEFORE ASH
+union_taxa = unique(append(aldex_fix_eff_t2d$taxon,
+                           ancom_fixeff_t2d$taxon))
+
+#transform aldex values
+phenotype_val_aldex_t2d$pheno_aldex_mod = aldex_valueConvert(value_aldex = phenotype_val_aldex_t2d$pheno_aldex)
+aldex_ancom_dbRMake(fam = "Lachnospiraceae",
+                    core_out = core_out_fix_eff_t2d,
+                    aldex_df = phenotype_val_aldex_t2d,
+                    ancom_df = phenotype_val_ancom_t2d)
+
+before_ash_pheno_comp = lapply(union_taxa, function(f) {
+  aldex_ancom_dbRMake(fam = f,
+                      core_out = core_out_fix_eff_t2d,
+                      sd_or_pheno = "pheno",
+                      aldex_df = phenotype_val_aldex_t2d,
+                      ancom_df = phenotype_val_ancom_t2d)
+})
+
 
 
