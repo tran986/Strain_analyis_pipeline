@@ -1153,11 +1153,11 @@ aldex_ancom_dbRMake = function(fam,
                                core_out, #any core.rds will work
                                ancom_df, #ancom_df = phenotype_val_ancom_t2d -- enframe() output from rds.
                                aldex_df) { #aldex_df = phenotype_val_aldex_t2d
-  #fam = "Coriobacteriaceae"
-  fam_species = core_out$list_pheno$pz.db$species[[fam]]
-  #aldex_df = sd_aldex_t2d
-  #ancom_df = sd_ancom_t2d
-  #sd_or_pheno = "sd"
+  #fam = "Bacteroidaceae"
+  #fam_species = core_out$list_pheno$pz.db$species[[fam]]
+  #ancom_df = phenotype_val_ancom_t2d
+  #aldex_df = phenotype_val_aldex_t2d
+  #sd_or_pheno = "pheno"
   
   #first ring - tree:
   tree = core_out$list_pheno$pz.db$trees[[fam]]
@@ -1194,9 +1194,9 @@ aldex_ancom_dbRMake = function(fam,
   }
   
   if (max_aldex > max_ancom) {
-    max_used = max_aldex_pheno
+    max_used = max_aldex
   } else {
-    max_used = max_ancom_pheno
+    max_used = max_ancom
   }
   
   if (sd_or_pheno == "pheno") {name = "pheno"} else {name = "sd"}
@@ -1205,7 +1205,9 @@ aldex_ancom_dbRMake = function(fam,
     ggnewscale::new_scale_fill() +
     ggtreeExtra::geom_fruit(
       data = aldex_df,
-      aes(x = 50, y = species, fill = ifelse(sd_or_pheno == "pheno", pheno_aldex_mod, sd_aldex)),
+      aes(x = 50, y = species, fill = if (sd_or_pheno == "pheno") {
+        aldex_df$pheno_aldex_mod
+      } else {aldex_df$sd_aldex}),
       geom = geom_tile,
       width = width,
       linewidth =  33) +
@@ -1220,7 +1222,9 @@ aldex_ancom_dbRMake = function(fam,
     ggnewscale::new_scale_fill() +
     ggtreeExtra::geom_fruit(
       data = ancom_df,
-      aes(x = 50, y = species, fill = ifelse(sd_or_pheno == "pheno", pheno_ancom, sd_ancom)),
+      aes(x = 50, y = species, fill = if (sd_or_pheno == "pheno") {
+        ancom_df$pheno_ancom
+      } else {ancom_df$sd_ancom}),
       geom = "geom_tile",
       width = width,
       linewidth = 33,
