@@ -1148,16 +1148,26 @@ bigrange_grad2 <- c(
   "#aa7115ff"
 )
 
+
 aldex_ancom_dbRMake = function(fam,
                                sd_or_pheno = "pheno",
                                core_out, #any core.rds will work
                                ancom_df, #ancom_df = phenotype_val_ancom_t2d -- enframe() output from rds.
                                aldex_df) { #aldex_df = phenotype_val_aldex_t2d
-  #fam = "Acutalibacteraceae"
-  #ancom_df = phenotype_val_ancom_t2d
-  #aldex_df = phenotype_val_aldex_t2d
+
+  #---debug starts === is it actually no overlaps for that family?
+  #fam = ""
+  #ancom_df = ancom_pheno_disease
+  #aldex_df = aldex_pheno_disease
   #sd_or_pheno = "pheno"
+
+  #test_tax = core_out$list_pheno$pz.db$taxonomy |> filter(family == fam)
+  #ancom_df |> left_join(test_tax, by = c("species"="cluster")) |> filter(!is.na(family))
+  #ancom_df[ancom_df$species %in% fam_species, ]
+  #aldex_df[aldex_df$species %in% fam_species, ]
   
+  #---debug ends ===
+
   fam_species = core_out$list_pheno$pz.db$species[[fam]]
   #first ring - tree:
   tree_fam = core_out$list_pheno$pz.db$trees[[fam]]
@@ -1188,7 +1198,7 @@ aldex_ancom_dbRMake = function(fam,
     min_aldex = min(aldex_df$sd_aldex)
     max_ancom = max(ancom_df$sd_ancom)
     min_ancom = min(ancom_df$sd_ancom)
-    if (min_aldex > min_ancom) {
+    if (min_aldex > min_ancom) { #min for sd: use the smallest sd b/w
       min_used = min_ancom
     } else {min_used = min_aldex}
   }
@@ -1205,56 +1215,107 @@ aldex_ancom_dbRMake = function(fam,
   if (fam == "Coriobacteriaceae") {width = 0.02} else {width = 0.06}
   double_ring = ring1 +
     ggnewscale::new_scale_fill() +
+    
     ggtreeExtra::geom_fruit(
       data = aldex_df,
-      aes(x = 50, y = species, fill = if (sd_or_pheno == "pheno") {
-        aldex_df$pheno_aldex_mod
-      } else {aldex_df$sd_aldex}),
+      aes(
+        x = 50,
+        y = species,
+        fill = if (sd_or_pheno == "pheno") {
+          aldex_df$pheno_aldex_mod
+        } else {
+          aldex_df$sd_aldex
+        }
+      ),
       geom = geom_tile,
       width = width,
-      linewidth =  33) +
-    scale_fill_gradientn(
-      name = paste0("Aldex3 ", name, " - r1"),
-      colours = bigrange_grad2,
-      limits = if (sd_or_pheno == "pheno") {
-        c(-max_used, max_used)
-      } else {
-        c(min_used, max_used)}
-      ) +
+      linewidth = 0.33
+    ) +
+    
+    (if (sd_or_pheno == "pheno") {
+      scale_fill_gradientn(
+        name = paste0("Aldex3 ", name, " - r1"),
+        colours = bigrange_grad2,
+        limits = c(-max_used, max_used)
+      )
+    } else {
+      scale_fill_gradient(
+        name = paste0("Aldex3 ", name, " - r1"),
+        low = "#DEEBF7",
+        high = "#08519C",
+        limits = c(min_used, max_used)
+      )
+    }) +
+    
     ggnewscale::new_scale_fill() +
+    
     ggtreeExtra::geom_fruit(
       data = ancom_df,
-      aes(x = 50, y = species, fill = if (sd_or_pheno == "pheno") {
-        ancom_df$pheno_ancom
-      } else {ancom_df$sd_ancom}),
+      aes(
+        x = 50,
+        y = species,
+        fill = if (sd_or_pheno == "pheno") {
+          ancom_df$pheno_ancom
+        } else {
+          ancom_df$sd_ancom
+        }
+      ),
       geom = "geom_tile",
       width = width,
-      linewidth = 33,
-      offset = 0.009) +
-    scale_fill_gradientn(
-      name = paste0("ANCOMBC ", name, " - r2"),
-      colours = bigrange_grad2,
-      limits = if (sd_or_pheno == "pheno") {
-        c(-max_used, max_used)
-      } else {
-        c(min_used, max_used)
-      }
+      linewidth = 0.33,
+      offset = 0.009
     ) +
+    
+    (if (sd_or_pheno == "pheno") {
+      scale_fill_gradientn(
+        name = paste0("ANCOMBC ", name, " - r1"),
+        colours = bigrange_grad2,
+        limits = c(-max_used, max_used)
+      )
+    } else {
+      scale_fill_gradient(
+        name = paste0("ANCOMBC ", name, " - r1"),
+        low = "#DEEBF7",
+        high = "#08519C",
+        limits = c(min_used, max_used)
+      )
+    }) +
+    
     theme(
-      plot.title = element_text(size = 13, hjust = 0.5, margin = margin(b = 0), face ="bold"),
+      plot.title = element_text(
+        size = 13,
+        hjust = 0.5,
+        margin = margin(b = 0),
+        face = "bold"
+      ),
       legend.box.margin = margin(0, 0, 0, 0),
       legend.spacing.x = unit(4, "pt"),
       legend.position = "bottom",
       legend.box = "horizontal",
       legend.box.just = "center",
-      legend.title = element_text(size = 13, face = "bold", margin = margin(b = 7) ),
-      legend.text = element_text(angle = 90, size = 13),
-      legend.key.height = unit(18, "pt"),  
-      legend.key.width  = unit(20, "pt"),
-      plot.caption = element_text(size = 13, face = "bold", hjust = 0.5, margin = margin(t = 5)),     # space above caption
+      legend.title = element_text(
+        size = 13,
+        face = "bold",
+        margin = margin(b = 7)
+      ),
+      legend.text = element_text(
+        angle = 90,
+        size = 13
+      ),
+      legend.key.height = unit(18, "pt"),
+      legend.key.width = unit(20, "pt"),
+      plot.caption = element_text(
+        size = 13,
+        face = "bold",
+        hjust = 0.5,
+        margin = margin(t = 5)
+      ),
       plot.margin = margin(20, 20, 20, 20)
-    ) + 
-    labs(title = paste0(fam, "- estimates compared"))
+    ) +
+    
+    labs(
+      title = paste0(fam, "- estimates compared")
+    )
   return(double_ring)
   
 }
