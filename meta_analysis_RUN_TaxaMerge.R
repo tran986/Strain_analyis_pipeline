@@ -438,7 +438,13 @@ union_taxa = unique(append(aldex_fix_eff_t2d$taxon,
 #phenotype value:
 #transform aldex values for phenotype value
 phenotype_val_aldex_t2d$pheno_aldex_mod = aldex_valueConvert(value_aldex = phenotype_val_aldex_t2d$pheno_aldex)
-
+after_ash_pheno_comp = lapply(union_taxa, \(f) {
+  aldex_ancom_dbRMake(fam = f,
+                      core_out = core_out_fix_eff_t2d,
+                      sd_or_pheno = "pheno",
+                      aldex_df = phenotype_val_aldex_t2d,
+                      ancom_df = phenotype_val_ancom_t2d)
+})
 
 
 #sd value:

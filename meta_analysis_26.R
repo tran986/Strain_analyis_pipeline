@@ -1153,15 +1153,15 @@ aldex_ancom_dbRMake = function(fam,
                                core_out, #any core.rds will work
                                ancom_df, #ancom_df = phenotype_val_ancom_t2d -- enframe() output from rds.
                                aldex_df) { #aldex_df = phenotype_val_aldex_t2d
-  #fam = "Bacteroidaceae"
-  #fam_species = core_out$list_pheno$pz.db$species[[fam]]
+  #fam = "Acutalibacteraceae"
   #ancom_df = phenotype_val_ancom_t2d
   #aldex_df = phenotype_val_aldex_t2d
   #sd_or_pheno = "pheno"
   
+  fam_species = core_out$list_pheno$pz.db$species[[fam]]
   #first ring - tree:
-  tree = core_out$list_pheno$pz.db$trees[[fam]]
-  ring1=ggtree(tree, layout = "circular", color = "#555555")  +
+  tree_fam = core_out$list_pheno$pz.db$trees[[fam]]
+  ring1=ggtree(tree_fam, layout = "circular", color = "#555555")  +
     theme(text=element_text(size = 20))
   
   #only keep the species overlap between 2 tools:
@@ -1198,6 +1198,8 @@ aldex_ancom_dbRMake = function(fam,
   } else {
     max_used = max_ancom
   }
+  
+  #intersect(aldex_df$species, tree_fam$tip.label)
   
   if (sd_or_pheno == "pheno") {name = "pheno"} else {name = "sd"}
   if (fam == "Coriobacteriaceae") {width = 0.02} else {width = 0.06}
