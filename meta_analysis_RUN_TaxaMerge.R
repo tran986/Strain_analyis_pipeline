@@ -452,95 +452,6 @@ phenotype_val_ancom_b4A = ancom_b4_ash$res[, c("taxon", "lfc_diseaseT2D")]
 se_ancom_b4A = ancom_b4_ash$res[, c("taxon", "se_diseaseT2D")]
 se_aldex_b4A = aldexExtract(aldex_b4_ash)$std.error
 
-#match species name with MGYG name -> find the overlapping species between 2 methods:
-b4A_Reprocess = \(
-  fam,
-  ancom_df, #can this be both pheno and sd
-  aldex_df,
-  core_out,
-  sd_or_pheno, #sd_or_pheno = "sd" or "pheno"
-  disease_or_treatment = "diseaseT2D" #disease_or_treatment == diseaseT2D or treatmentyes
-) {
-  
-  #debug starts:
-  fam = "Acutalibacteraceae"
-  aldex_df = phenotype_val_aldex_b4A
-  aldex_df = se_aldex_b4A
-  colnames(aldex_df)
-  ancom_df = se_ancom_b4A
-  #debug ends:
-
- taxon_fam = aldex_core_fix_eff_t2d$list_pheno$pz.db$taxon |> 
-    filter(family == fam) 
-  
-  #--Aldex modifying names and columns:
-  aldex_df = aldex_df |> 
-    left_join(taxon_fam, by = c("taxon"="species")) |>
-    dplyr::select(cluster, diseaseT2D, treatmentyes) |> 
-    drop_na(cluster)
-  
-  if (disease_or_treatment == "diseaseT2D") {
-    aldex_df = aldex_df |> 
-      dplyr::rename("species" = "cluster",
-                    "pheno_aldex" = "diseaseT2D") |> 
-      dplyr::select(-treatmentyes) #|>
-      #mutate(pheno_aldex_mod = aldex_valueConvert(pheno_aldex))
-  } else {
-    aldex_df = aldex_df |> 
-      dplyr::rename("species" = "cluster",
-                    "pheno_aldex" = "treatmentyes") |> 
-      dplyr::select(-diseaseT2D) #|>
-      #mutate(pheno_aldex_mod = aldex_valueConvert(pheno_aldex))
-  }
-
-  if (sd_or_pheno == "pheno") {
-    aldex_df = aldex_df |> mutate(pheno_aldex_mod = aldex_valueConvert(pheno_aldex))
-  } else {
-    aldex_df = aldex_df
-  }
-  
-
-  #--ANCOMBC modifying names and columns:
-  ancom_pheno = phenotype_val_ancom_b4A |>
-    left_join(taxon_fam, by = c('taxon'='species')) |>
-    dplyr::select(cluster, lfc_diseaseT2D) |>
-    drop_na(cluster) |> 
-    dplyr::rename("species" = "cluster",
-                  "pheno_ancom" = "lfc_diseaseT2D")
-  
-  #return:
-  return(list(aldex_df = aldex_pheno,
-              ancom_df = ancom_pheno))
-  
-}
-
-
-
-fam = "Lachnospiraceae"
-taxon_fam = aldex_core_fix_eff_t2d$list_pheno$pz.db$taxon |> 
-  filter(family == fam) 
-
-#--Aldex modifying names and columns:
-aldex_pheno = phenotype_val_aldex_b4A |> 
-  left_join(taxon_fam, by = c("taxon"="species")) |>
-  dplyr::select(cluster, diseaseT2D, treatmentyes) |> 
-  drop_na(cluster)
-  
-aldex_pheno_disease = aldex_pheno |> 
-  dplyr::rename("species" = "cluster",
-                "pheno_aldex" = "diseaseT2D") |> 
-  dplyr::select(-treatmentyes) |>
-  mutate(pheno_aldex_mod = aldex_valueConvert(pheno_aldex))
-
-#--ANCOMBC modifying names and columns:
-ancom_pheno_disease = phenotype_val_ancom_b4A |>
-  left_join(taxon_fam, by = c('taxon'='species')) |>
-  dplyr::select(cluster, lfc_diseaseT2D) |>
-  drop_na(cluster) |> 
-  dplyr::rename("species" = "cluster",
-                "pheno_ancom" = "lfc_diseaseT2D")
-
-
 #####----apply pre-made functions: 
 #after ash:
 #phenotype:
@@ -559,16 +470,39 @@ at_ash_sd = lapply(union_taxa, \(f)
                                        ancom_df = sd_ancom_t2d)
 )
 
-
 #before ash:
+#run re-process function first:
+pheno_b4A_reproc=setNames(lapply(union_taxa, \(f) b4A_Reprocess(fam = f,
+                                      ancom_df = phenotype_val_ancom_b4A,
+                                      aldex_df = phenotype_val_aldex_b4A,
+                                      core_out = core_out_fix_eff_t2d,
+                                      sd_or_pheno = "pheno",
+                                      disease_or_treatment = "diseaseT2D")), union_taxa)
+
+sd_b4A_reproc = setNames(lapply(union_taxa, \(f) b4A_Reprocess(fam = f,
+                                                      ancom_df = se_ancom_b4A,
+                                                      aldex_df = se_aldex_b4A,
+                                                      core_out = core_out_fix_eff_t2d,
+                                                      sd_or_pheno = "sd",
+                                                      disease_or_treatment = "diseaseT2D")), union_taxa)
+
 #phenotype:
-b4_ash_pheno = lapply(union_taxa, \(f)
-                      aldex_ancom_dbRMake(fam = "Acutalibacteraceae",
+b4_ash_pheno = lapply(names(pheno_b4A_reproc), \(f)
+                      aldex_ancom_dbRMake(fam = f,
                                           core_out = core_out_fix_eff_t2d,
                                           sd_or_pheno = "pheno",
-                                          aldex_df = ,
-                                          ancom_df = ))
-b4_ash_sd 
+                                          aldex_df = pheno_b4A_reproc[[f]]$aldex_df,
+                                          ancom_df = pheno_b4A_reproc[[f]]$ancom_df))
+
+
+
+b4_ash_sd = lapply(names(sd_b4A_reproc), \(f)
+                   aldex_ancom_dbRMake(fam = f,
+                                       core_out = core_out_fix_eff_t2d,
+                                       sd_or_pheno = "sd",
+                                       aldex_df = sd_b4A_reproc[[f]]$aldex_df,
+                                       ancom_df = sd_b4A_reproc[[f]]$ancom_df))
+
 
 
 

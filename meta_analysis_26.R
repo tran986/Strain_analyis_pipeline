@@ -1320,4 +1320,89 @@ aldex_ancom_dbRMake = function(fam,
   
 }
 
+#28. for before ash (the format is not consistent) -> need to re-process first:
+#match species name with MGYG name -> find the overlapping species between 2 methods:
+b4A_Reprocess = \(
+  fam,
+  ancom_df, #can this be both pheno and sd
+  aldex_df,
+  core_out,
+  sd_or_pheno, #sd_or_pheno = "sd" or "pheno"
+  disease_or_treatment = "diseaseT2D" #disease_or_treatment == diseaseT2D or treatmentyes
+) {
+  
+  #==debug starts:
+  #fam = "Acutalibacteraceae"
+  #aldex_df = phenotype_val_aldex_b4A
+  #aldex_df = se_aldex_b4A
+  #colnames(aldex_df)
+  #disease_or_treatment
+  #ancom_df = se_ancom_b4A
+  #==debug ends:
+  
+  taxon_fam = aldex_core_fix_eff_t2d$list_pheno$pz.db$taxon |> 
+    filter(family == fam) 
+  
+  #--Aldex modifying names and columns:
+  aldex_df = aldex_df |> 
+    left_join(taxon_fam, by = c("taxon"="species")) |>
+    dplyr::select(cluster, diseaseT2D, treatmentyes) |> 
+    drop_na(cluster)
+  
+  if (disease_or_treatment == "diseaseT2D") {
+    aldex_df = aldex_df |> 
+      dplyr::rename("species" = "cluster",
+                    "pheno_aldex" = "diseaseT2D") |> 
+      dplyr::select(-treatmentyes) #|>
+    #mutate(pheno_aldex_mod = aldex_valueConvert(pheno_aldex))
+  } else {
+    aldex_df = aldex_df |> 
+      dplyr::rename("species" = "cluster",
+                    "pheno_aldex" = "treatmentyes") |> 
+      dplyr::select(-diseaseT2D) #|>
+    #mutate(pheno_aldex_mod = aldex_valueConvert(pheno_aldex))
+  }
+  
+  if (sd_or_pheno == "pheno") {
+    aldex_df = aldex_df |> mutate(pheno_aldex_mod = aldex_valueConvert(pheno_aldex))
+  } else {
+    aldex_df = aldex_df |> rename("sd_aldex"="pheno_aldex")
+  }
+  
+  #--ANCOMBC modifying names and columns:
+  ancom_df = ancom_df |>
+    left_join(taxon_fam, by = c('taxon'='species'))
+  if (disease_or_treatment == "diseaseT2D") {
+    if (sd_or_pheno == "sd") {
+      ancom_df = ancom_df |>  dplyr::select(cluster, se_diseaseT2D) |>
+        drop_na(cluster) |> 
+        dplyr::rename("species" = "cluster",
+                      "sd_ancom" = "se_diseaseT2D")
+    } else {
+      ancom_df = ancom_df |>  dplyr::select(cluster, lfc_diseaseT2D) |>
+        drop_na(cluster) |> 
+        dplyr::rename("species" = "cluster",
+                      "pheno_ancom" = "lfc_diseaseT2D")
+    }
+  } else {
+    if (sd_or_pheno == "sd") {
+      ancom_df = ancom_df |>  dplyr::select(cluster, se_treatmentyes) |>
+        drop_na(cluster) |> 
+        dplyr::rename("species" = "cluster",
+                      "sd_ancom" = "se_treatmentyes")
+    } else {
+      ancom_df = ancom_df |>  dplyr::select(cluster, lfc_treatmentyes) |>
+        drop_na(cluster) |> 
+        dplyr::rename("species" = "cluster",
+                      "pheno_ancom" = "lfc_treatmentyes")
+    }
+  }
+  
+  #return:
+  return(list(aldex_df = aldex_df,
+              ancom_df = ancom_df))
+  
+}
+
+
 
