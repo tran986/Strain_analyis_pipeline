@@ -1268,13 +1268,13 @@ aldex_ancom_dbRMake = function(fam,
     
     (if (sd_or_pheno == "pheno") {
       scale_fill_gradientn(
-        name = paste0("ANCOMBC ", name, " - r1"),
+        name = paste0("ANCOMBC ", name, " - r2"),
         colours = bigrange_grad2,
         limits = c(-max_used, max_used)
       )
     } else {
       scale_fill_gradient(
-        name = paste0("ANCOMBC ", name, " - r1"),
+        name = paste0("ANCOMBC ", name, " - r2"),
         low = "#DEEBF7",
         high = "#08519C",
         limits = c(min_used, max_used)
