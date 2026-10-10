@@ -258,43 +258,37 @@ count_tbl_merge = read.delim(paste0(working_dir, "/fix_effect/count_tbl_fix_eff/
 #saveRDS(aldex_fit_diseaseOnly, paste0(working_dir, "/fix_effect/aldex/aldex3_fit_diseaseOnly.rds"))
 
 print("fitting Aldex3 with disease & treatment as fixed effects ...")
-#aldex_fit_fix_effs = aldexRun(count_tbl = count_tbl_merge,
+#aldex_fit_fix_effs = su(count_tbl = count_tbl_merge,
 #			      metadata_tbl = metadata_tbl_merge,
 #			      fix_effect_used = TRUE)
 
 #saveRDS(aldex_fit_fix_effs, paste0(working_dir, "/fix_effect/aldex/aldex3_fit_fix_effs.rds"))
 
-aldex_fit_fix_effs = readRDS(paste0(working_dir, "/aldex3_fit_fix_effs.rds"))
+aldex_fit_fix_effs = readRDS(paste0(working_dir, "/aldex_fix_eff.rds"))
 #use this aldex3 fit for ashr -> phylogenize2 
 #print("saving aldex3 fit res for Phylogenize...")
 #aldex_fit_diseaseOnly_res = summary(aldex_fit_diseaseOnly)
 print("processing aldex3 output-mean")
-aldex_fix_eff_res = aldexExtract(aldex_output = aldex_fit_fix_effs)
+aldex_fix_eff_res = ALDEx3:::summary.aldex(aldex_fit_fix_effs) 
 
 #combining mean and se into 1 df -- diseaseT2D:
-diseaseT2D = dplyr::inner_join(data.frame(taxon = aldex_fix_eff_res$estimate$taxon, 
-                                          estimate = aldex_fix_eff_res$estimate$diseaseT2D),
-                               data.frame(taxon = aldex_fix_eff_res$std.error$taxon,
-                                          std.error = aldex_fix_eff_res$std.error$diseaseT2D),
-                               by = "taxon"
-)
-
+diseaseT2D = aldex_fix_eff_res[aldex_fix_eff_res$parameter == "diseaseT2D", ]
 
 print("applied ashr on aldex3 output...") #saved into "cross_check" dir under mergeTaxa
 aldex_ash_fix_effT2D = ashr::ash(betahat = diseaseT2D$estimate,
                                 sebetahat = diseaseT2D$std.error)
 
 aldex_ash_fix_eff_T2D_res = aldex_ash_fix_effT2D$res
-aldex_ash_fix_eff_T2D_res$taxon <- diseaseT2D$taxon
+aldex_ash_fix_eff_T2D_res$taxon <- diseaseT2D$entity
 
-aldex_ash_fix_eff_res = aldex_ash_fix_eff_T2D_res$taxon %>%
+aldex_ash_fix_eff_res = aldex_ash_fix_eff_T2D_res %>%
   dplyr::select(taxon, PosteriorMean, PosteriorSD) %>%
   dplyr::rename("estimate"="PosteriorMean",
                 "stderr"="PosteriorSD")
 
 #save "provided" phenotype file:
 write.table(aldex_ash_fix_eff_res,
-            paste0(working_dir, "/fix_effect/aldex/aldex3_fix_eff_ash_res.tab"),            
+            paste0(working_dir, "/aldex3_FIX_eff_ash_res.tab"),            
             sep = "\t", row.names = FALSE)
 
 #phylogenize_run(provided_file_path = paste0(working_dir, "/fix_effect/aldex/aldex_ash_res.tab"),
@@ -306,7 +300,7 @@ write.table(aldex_ash_fix_eff_res,
 
 #-----------------
 #add PD to Aldex3 run as well:
-aldex_core_output = readRDS(paste0(working_dir, "/core_output_aldex3_taxaMerge_crosscheck.rds"))
+aldex_core_output = readRDS(paste0(working_dir, "/core_output/core_output_aldex3_taxaMerge_crosscheck.rds"))
 aldex_phyloz_PD=gene_dist_func(phyloz_output = aldex_phyloz_out,
                core_out = aldex_core_output)
 aldex_phyloz_PD_func = left_join(aldex_phyloz_PD, 
@@ -335,11 +329,6 @@ phenotype_val_ancom_t2d = enframe(core_out_fix_eff_t2d$list_pheno$phenotype_resu
 sd_ancom_t2d = enframe(core_out_fix_eff_t2d$list_pheno$phenotype_results$pheno_sd,
                        value = "sd_ancom",
                        name = "species")
-
-cor(join_tbl$value_aldex,
-    join_tbl$value_ancom,
-    method = "spearman")
-
 
 aldex_fix_eff_phyloz_t2d = read.csv(paste0(working_dir, "/all-results-aldex-fix-eff-t2d.csv"))
 aldex_fix_eff_phyloz_met = read.csv(paste0(working_dir, "/all-results-aldex-fix-eff-met.csv"))
@@ -445,12 +434,18 @@ aldex_b4_ash = readRDS(paste0(working_dir, "/aldex_fix_eff.rds"))
 
 #import + extract pheno and sd before ash
 #pheno
-phenotype_val_aldex_b4A = aldexExtract(aldex_b4_ash)$estimate
+#phenotype_val_aldex_b4A = aldexExtract(aldex_b4_ash)$estimate
+phenotype_val_aldex_b4A = ALDEx3:::summary.aldex(aldex_b4_ash) |> 
+  dplyr::filter(parameter == "diseaseT2D") |>
+  dplyr::select(entity, estimate)
+
 phenotype_val_ancom_b4A = ancom_b4_ash$res[, c("taxon", "lfc_diseaseT2D")]
 
 #sd:
 se_ancom_b4A = ancom_b4_ash$res[, c("taxon", "se_diseaseT2D")]
-se_aldex_b4A = aldexExtract(aldex_b4_ash)$std.error
+se_aldex_b4A = ALDEx3:::summary.aldex(aldex_b4_ash) |>
+  dplyr::filter(parameter == "diseaseT2D") |>
+  dplyr::select(entity, std.error)
 
 #####----apply pre-made functions: 
 #after ash:
@@ -472,7 +467,7 @@ at_ash_sd = lapply(union_taxa, \(f)
 
 #before ash:
 #run re-process function first:
-pheno_b4A_reproc=setNames(lapply(union_taxa, \(f) b4A_Reprocess(fam = f,
+pheno_b4A_reproc=setNames(lapply(union_taxa, \(f) b4A_Reprocess(fam = "Lachnospiraceae",
                                       ancom_df = phenotype_val_ancom_b4A,
                                       aldex_df = phenotype_val_aldex_b4A,
                                       core_out = core_out_fix_eff_t2d,
@@ -494,8 +489,7 @@ b4_ash_pheno = lapply(names(pheno_b4A_reproc), \(f)
                                           aldex_df = pheno_b4A_reproc[[f]]$aldex_df,
                                           ancom_df = pheno_b4A_reproc[[f]]$ancom_df))
 
-
-
+#sd:
 b4_ash_sd = lapply(names(sd_b4A_reproc), \(f)
                    aldex_ancom_dbRMake(fam = f,
                                        core_out = core_out_fix_eff_t2d,
@@ -504,5 +498,22 @@ b4_ash_sd = lapply(names(sd_b4A_reproc), \(f)
                                        ancom_df = sd_b4A_reproc[[f]]$ancom_df))
 
 
+#================================Checking the consensus between Aldex2 and ANCOMBC - pvalue:
+#right after aldex and ANCOMBC, take p-values and see if they overlap -- before ashr:
+phenotype_val_ancom_b4A$pheno_diseaseT2D_ancom<-phenotype_val_ancom_b4A$lfc_diseaseT2D
+phenotype_val_aldex_b4A$pheno_diseaseT2D_aldex<-phenotype_val_aldex_b4A$diseaseT2D
+test = inner_join(phenotype_val_ancom_b4A,
+           phenotype_val_aldex_b4A, 
+           by = "taxon")[, c("taxon", "pheno_diseaseT2D_ancom", "pheno_diseaseT2D_aldex")]
 
+ggplot(test, aes(x = pheno_diseaseT2D_ancom,
+                 y = pheno_diseaseT2D_aldex)) + geom_point()
 
+ancom_b4_ash$res[, c("taxon", "p_diseaseT2D")]
+
+summary(aldex_b4_ash) |> filter(parameter == "diseaseT2D")
+
+aldex_b4_ash$std.error
+
+sd = apply(aldex_b4_ash$std.error,
+           c(1,2), sd) 
