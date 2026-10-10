@@ -6,6 +6,7 @@ library(httr2)
 library(readr)
 library(purrr)
 library(ashr)
+library(scales)
 library(dplyr)
 library(tidyverse)
 library(devtools)
@@ -104,7 +105,7 @@ import_bracken_truncate = function(study_id) {
   #data = 
   data_sq_ls = setNames(lapply(seq_along(group_sq_ls), function(i) {
     lapply(group_sq_ls[[i]], function(file) {
-      map(file, ~ { read_tsv(file.path(paste0(working_dir, "/truncate_abund/", study_id), .),
+      purrr::map(file, ~ { read_tsv(file.path(paste0(working_dir, "/truncate_abund/", study_id), .),
                              show_col_types = F)})
     })
   }), sq_len_ls)
@@ -1064,25 +1065,6 @@ aldexRun = function(count_tbl, metadata_tbl, fix_effect_used = F) {
   
 }
 
-#23.
-aldexExtract=function(aldex_output) {
-  mean = apply(aldex_output$estimate,
-               c(1,2), mean)
-  mean_df = as.data.frame(t(mean))
-  mean_df$taxon<-rownames(mean_df)
-  rownames(mean_df)<-NULL
-  mean_df = mean_df[,c("taxon","(Intercept)","diseaseT2D", "treatmentyes")]
-  
-  sd = apply(aldex_output$std.error,
-             c(1,2), sd)
-  sd_df = as.data.frame(t(sd))
-  sd_df$taxon <- rownames(sd_df)
-  rownames(sd_df)<-NULL
-  sd_df = sd_df[, c("taxon", "(Intercept)", "diseaseT2D", "treatmentyes")]
-  
-  return(list(estimate = mean_df,
-              std.error = sd_df))
-}
 
 #24.
 figMake_phyloz=function(phyloz_out) {
